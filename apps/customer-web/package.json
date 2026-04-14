@@ -1,0 +1,38 @@
+{
+  "name": "@fitmeals/customer-web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@fitmeals/api-client": "workspace:*",
+    "@fitmeals/types": "workspace:*",
+    "@fitmeals/ui": "workspace:*",
+    "@fitmeals/utils": "workspace:*",
+    "@hookform/resolvers": "^3.9.1",
+    "@tanstack/react-query": "^5.62.8",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.468.0",
+    "next": "^15.1.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.54.2",
+    "react-leaflet": "^5.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@fitmeals/config": "workspace:*",
+    "@types/leaflet": "^1.9.21",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3"
+  }
+}

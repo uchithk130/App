@@ -1,0 +1,2 @@
+-- AlterEnum: add ASSIGNED to OrderStatus
+ALTER TYPE "OrderStatus" ADD VALUE 'ASSIGNED' BEFORE 'OUT_FOR_DELIVERY';

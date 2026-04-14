@@ -1,0 +1,16 @@
+{
+  "name": "@fitmeals/config",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./tailwind.preset": "./tailwind.preset.ts",
+    "./tsconfig.base.json": "./tsconfig.base.json"
+  },
+  "files": ["tsconfig.base.json", "eslint.config.mjs", "tailwind.preset.ts"],
+  "dependencies": {
+    "tailwindcss": "^3.4.17"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

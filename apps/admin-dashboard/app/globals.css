@@ -1,0 +1,19 @@
+@import "@fitmeals/ui/globals.css";
+
+/* Admin app — aligned with login split (navy + orange + canvas) */
+:root {
+  --admin-navy: #0b1120;
+  --admin-navy-panel: #0f172a;
+  --admin-orange: #f2990d;
+  --admin-orange-hover: #e68a00;
+  --admin-canvas: #eef2f6;
+  --admin-input-bg: #e8f0fe;
+}
+
+.sego-tiptap .tiptap p.is-editor-empty:first-child::before {
+  color: rgb(148 163 184);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

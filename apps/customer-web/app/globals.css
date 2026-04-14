@@ -1,0 +1,56 @@
+@import "@fitmeals/ui/globals.css";
+
+/* kcal / nutrition UI — match Figma references (sage, coral, soft surfaces) */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 18%;
+  --card: 40 50% 99%;
+  --card-foreground: 0 0% 18%;
+  --primary: 103 35% 62%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 40 100% 97%;
+  --secondary-foreground: 0 0% 18%;
+  --accent: 11 100% 75%;
+  --accent-foreground: 0 0% 100%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 50%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 40 20% 92%;
+  --input: 40 20% 92%;
+  --ring: 103 35% 62%;
+  --radius: 1.25rem;
+
+  --kcal-splash: 106 38% 67%;
+  --kcal-sage: 103 35% 62%;
+  --kcal-sage-dark: 103 32% 48%;
+  --kcal-coral: 11 100% 75%;
+  --kcal-coral-muted: 11 90% 88%;
+  --kcal-charcoal: 0 0% 18%;
+  --kcal-cream: 40 100% 97%;
+  --kcal-purple-from: 258 90% 84%;
+  --kcal-purple-to: 263 70% 72%;
+}
+
+body {
+  @apply antialiased;
+}
+
+.kcal-safe-pb {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@keyframes wellness-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wellness-fade-in {
+  animation: wellness-fade-in 0.45s ease-out both;
+}
