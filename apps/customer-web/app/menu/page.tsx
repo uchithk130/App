@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -252,10 +253,10 @@ function CategoryRail({
 type CartItem = { id: string; quantity: number; meal: { id: string } };
 type Cart = { id: string; items: CartItem[] };
 
-export default function MenuPage() {
-  const qc = useQueryClient();
-  const [search, setSearch] = React.useState("");
-  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+function MenuPageContent() {
+const qc = useQueryClient();
+const [search, setSearch] = React.useState("");
+const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const sp = useSearchParams();
   const [categorySlug, setCategorySlug] = React.useState(sp.get("category") ?? "");
   const [quickFilter, setQuickFilter] = React.useState<QuickFilter>("all");
@@ -470,5 +471,13 @@ export default function MenuPage() {
         </div>
       </KcalAppLayout>
     </KcalViewportShell>
+  );
+}
+
+export default function MenuPage() {
+  return (
+    <Suspense fallback={null}>
+      <MenuPageContent />
+    </Suspense>
   );
 }
