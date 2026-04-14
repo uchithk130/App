@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,7 +19,13 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth-store";
-import { DeliveryMap, type DeliveryMarker } from "@/components/delivery/delivery-map";
+import dynamic from "next/dynamic";
+import type { DeliveryMarker } from "@/components/delivery/delivery-map";
+
+const DeliveryMap = dynamic(
+    () => import("@/components/delivery/delivery-map").then(m => m.DeliveryMap),
+    { ssr: false }
+);
 
 /* ── All query keys used by this page ── */
 const QK = {
