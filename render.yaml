@@ -1,0 +1,16 @@
+# Render.yaml configuration for Turbo monorepo
+
+services:
+  fitmeals-api:
+    type: service
+    env: node
+    plan: starter
+    buildCommand: "pnpm install"
+    startCommand: "pnpm start"
+
+  fitmeals-admin-dashboard:
+    type: service
+    env: node
+    plan: starter
+    buildCommand: "pnpm install"
+    startCommand: "pnpm start"
