@@ -21,7 +21,7 @@ export default function AboutPage() {
             <h2 className="text-lg font-bold text-kcal-charcoal">Our Mission</h2>
             <p className="text-sm leading-relaxed text-kcal-charcoal">
               FitMeals delivers nutritionally balanced, chef-prepared meals designed to fuel your fitness goals. Whether
-              you&apos;re building muscle, cutting fat, or just eating smarter — we&apos;ve got your plate covered.
+              you&apos;re building muscle, cutting fat, or just eating smarter &mdash; we&apos;ve got your plate covered.
             </p>
           </section>
 
@@ -34,7 +34,7 @@ export default function AboutPage() {
           </section>
 
           <p className="mt-8 text-center text-xs text-kcal-muted">
-            Made with ?? by the FitMeals team
+            Made with love by the FitMeals team
           </p>
         </main>
       </div>

@@ -2,6 +2,7 @@
 
 /* kcal / nutrition UI — match Figma references (sage, coral, soft surfaces) */
 :root {
+  --font-kcal: "Nunito", system-ui, sans-serif;
   --background: 0 0% 100%;
   --foreground: 0 0% 18%;
   --card: 40 50% 99%;

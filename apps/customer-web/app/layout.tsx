@@ -1,13 +1,6 @@
 import type { Metadata } from "next";
-import { Nunito } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-
-const kcalFont = Nunito({
-  subsets: ["latin"],
-  variable: "--font-kcal",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "kcal — FitMeals",
@@ -16,7 +9,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={kcalFont.variable}>
+    <html lang="en">
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Nunito:wght@200..1000&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-screen bg-background font-kcal text-foreground">
         <Providers>{children}</Providers>
       </body>
