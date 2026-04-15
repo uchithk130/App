@@ -25,6 +25,7 @@ import {
   Gift,
   Tag,
   Layers,
+  FileText,
 } from "lucide-react";
 import { Button } from "@fitmeals/ui";
 import { clearTokens, getAccessToken } from "@/lib/auth-store";
@@ -46,6 +47,7 @@ const otherNav = [
     items: [
       { href: "/delivery", label: "Delivery & riders", Icon: Truck },
       { href: "/riders", label: "Riders", Icon: Users },
+      { href: "/rider-requests", label: "Rider Requests", Icon: FileText },
       { href: "/customers", label: "Customers", Icon: UserRound },
     ],
   },

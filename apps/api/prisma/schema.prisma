@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 enum RoleCode {
@@ -97,6 +96,25 @@ enum WalletTransactionType {
   WITHDRAWAL_HOLD
   WITHDRAWAL_RELEASE
   REVERSAL
+}
+
+enum BankVerificationStatus {
+  NOT_SUBMITTED
+  PENDING_VERIFICATION
+  VERIFICATION_IN_PROGRESS
+  VERIFIED
+  VERIFICATION_FAILED
+}
+
+enum EditRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum EditRequestType {
+  PROFILE
+  BANK_DETAILS
 }
 
 enum WithdrawalStatus {
@@ -246,31 +264,90 @@ model CustomerProfile {
 }
 
 model RiderProfile {
-  id               String               @id @default(cuid())
-  userId           String               @unique
-  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fullName         String
-  availability     RiderAvailability    @default(OFFLINE)
-  approvalStatus   RiderApprovalStatus  @default(PENDING)
-  approvedAt       DateTime?
-  rejectionReason  String?
-  vehicleType      String?
-  vehicleNumber    String?
-  kycStatus        String?
-  bankDetailsJson  Json?
-  lastKnownLat     Decimal?          @db.Decimal(10, 7)
-  lastKnownLng     Decimal?          @db.Decimal(10, 7)
-  locationUpdatedAt DateTime?
-  wallet           Wallet?
-  assignments      RiderAssignment[]
-  driverRatings    DriverRating[]
-  tips             TipTransaction[]
-  notifications    NotificationLog[]
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
+  id                 String               @id @default(cuid())
+  userId             String               @unique
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName           String
+  avatarUrl          String?
+  emergencyContact   String?
+  licenseNumber      String?
+  address            String?
+  isProfileCompleted Boolean              @default(false)
+  availability       RiderAvailability    @default(OFFLINE)
+  approvalStatus     RiderApprovalStatus  @default(PENDING)
+  approvedAt         DateTime?
+  rejectionReason    String?
+  vehicleType        String?
+  vehicleNumber      String?
+  kycStatus          String?
+  bankDetailsJson    Json?
+  lastKnownLat       Decimal?             @db.Decimal(10, 7)
+  lastKnownLng       Decimal?             @db.Decimal(10, 7)
+  locationUpdatedAt  DateTime?
+  wallet             Wallet?
+  bankAccount        RiderBankAccount?
+  editRequests       RiderEditRequest[]
+  assignments        RiderAssignment[]
+  driverRatings      DriverRating[]
+  tips               TipTransaction[]
+  notifications      NotificationLog[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
   @@index([availability])
   @@index([approvalStatus])
+}
+
+model RiderBankAccount {
+  id                        String                 @id @default(cuid())
+  riderId                   String                 @unique
+  rider                     RiderProfile           @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  accountHolderName         String
+  maskedAccountNumber       String
+  accountNumberEncrypted    String
+  ifscCode                  String
+  bankName                  String?
+  upiId                     String?
+  verificationStatus        BankVerificationStatus @default(NOT_SUBMITTED)
+  verificationProvider      String?
+  verificationReferenceId   String?
+  verifiedAt                DateTime?
+  approvedByAdminId         String?
+  approvedAt                DateTime?
+  isActive                  Boolean                @default(false)
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+
+  @@index([verificationStatus])
+}
+
+model RiderEditRequest {
+  id                        String                  @id @default(cuid())
+  riderId                   String
+  rider                     RiderProfile            @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  requestType               EditRequestType
+  status                    EditRequestStatus       @default(PENDING)
+  currentDataJson           Json?
+  submittedDataJson         Json
+  /// Bank-specific: masked account number for display
+  maskedAccountNumber       String?
+  /// Bank-specific: encrypted account number
+  accountNumberEncrypted    String?
+  /// Bank verification
+  verificationStatus        BankVerificationStatus?
+  verificationProvider      String?
+  verificationReferenceId   String?
+  verifiedAt                DateTime?
+  /// Admin review
+  reviewNotes               String?
+  reviewedAt                DateTime?
+  reviewedByAdminId         String?
+  submittedAt               DateTime               @default(now())
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+
+  @@index([riderId, requestType, status])
+  @@index([status, requestType, createdAt])
 }
 
 model AdminProfile {
@@ -866,15 +943,16 @@ model WalletTransaction {
 }
 
 model WithdrawalRequest {
-  id        String           @id @default(cuid())
-  walletId  String
-  wallet    Wallet           @relation(fields: [walletId], references: [id], onDelete: Cascade)
-  amount    Decimal          @db.Decimal(12, 2)
-  status    WithdrawalStatus @default(PENDING)
-  bankRef   String?
-  adminNote String?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id             String           @id @default(cuid())
+  walletId       String
+  wallet         Wallet           @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  amount         Decimal          @db.Decimal(12, 2)
+  status         WithdrawalStatus @default(PENDING)
+  bankAccountId  String?
+  bankRef        String?
+  adminNote      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@index([walletId, status])
   @@index([status, createdAt])

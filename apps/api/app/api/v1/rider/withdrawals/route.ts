@@ -17,6 +17,18 @@ export async function POST(req: Request) {
     const amount = new Prisma.Decimal(String(body.amount));
     if (amount.lte(0)) return errorJson("Invalid amount", 400);
 
+    // Check for active verified bank account
+    const bankAccount = await prisma.riderBankAccount.findUnique({
+      where: { riderId: profile.id },
+    });
+    if (!bankAccount || !bankAccount.isActive) {
+      return errorJson(
+        "You need a verified and approved bank account before requesting a withdrawal",
+        400,
+        "NO_ACTIVE_BANK",
+      );
+    }
+
     const id = await prisma.$transaction(async (tx) => {
       const wallet = await tx.wallet.findUnique({ where: { riderId: profile.id } });
       if (!wallet) throw new Error("NO_WALLET");
@@ -42,12 +54,13 @@ export async function POST(req: Request) {
           walletId: wallet.id,
           amount,
           status: WithdrawalStatus.PENDING,
+          bankAccountId: bankAccount.id,
         },
       });
       return w.id;
     });
 
-    return json({ id });
+    return json({ id, bankAccount: { maskedAccountNumber: bankAccount.maskedAccountNumber, bankName: bankAccount.bankName } });
   } catch (e) {
     if (e instanceof AuthError) return errorJson(e.message, e.status, "AUTH");
     if (e instanceof z.ZodError) return errorJson("Invalid body", 400, "VALIDATION", e.flatten());

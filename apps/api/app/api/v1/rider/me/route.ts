@@ -1,4 +1,4 @@
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, EditRequestStatus, EditRequestType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { errorJson, json } from "@/lib/http";
 import { requireRider, AuthError } from "@/lib/auth/rider";
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [activeCount, todayDelivered, totalDeliveries, wallet] = await Promise.all([
+    const [activeCount, todayDelivered, totalDeliveries, wallet, bankAccount, pendingEdits] = await Promise.all([
       prisma.order.count({
         where: {
           assignment: { riderId: profile.id, unassignedAt: null },
@@ -41,6 +41,24 @@ export async function GET(req: Request) {
         where: { riderId: profile.id },
         select: { balance: true, heldBalance: true },
       }),
+      prisma.riderBankAccount.findUnique({
+        where: { riderId: profile.id },
+        select: {
+          accountHolderName: true,
+          maskedAccountNumber: true,
+          bankName: true,
+          ifscCode: true,
+          upiId: true,
+          verificationStatus: true,
+          isActive: true,
+        },
+      }),
+      prisma.riderEditRequest.count({
+        where: {
+          riderId: profile.id,
+          status: EditRequestStatus.PENDING,
+        },
+      }),
     ]);
 
     return json({
@@ -48,10 +66,27 @@ export async function GET(req: Request) {
       fullName: profile.fullName,
       email: user?.email ?? null,
       phone: user?.phone ?? null,
+      avatarUrl: profile.avatarUrl,
       availability: profile.availability,
       approvalStatus: profile.approvalStatus,
       vehicleType: profile.vehicleType,
       vehicleNumber: profile.vehicleNumber,
+      licenseNumber: profile.licenseNumber,
+      emergencyContact: profile.emergencyContact,
+      address: profile.address,
+      isProfileCompleted: profile.isProfileCompleted,
+      bankAccount: bankAccount
+        ? {
+            accountHolderName: bankAccount.accountHolderName,
+            maskedAccountNumber: bankAccount.maskedAccountNumber,
+            bankName: bankAccount.bankName,
+            ifscCode: bankAccount.ifscCode,
+            upiId: bankAccount.upiId,
+            verificationStatus: bankAccount.verificationStatus,
+            isActive: bankAccount.isActive,
+          }
+        : null,
+      pendingEditRequests: pendingEdits,
       stats: {
         activeOrders: activeCount,
         todayDelivered,
