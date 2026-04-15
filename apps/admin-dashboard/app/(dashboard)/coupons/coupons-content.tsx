@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Gift, Loader2, Pencil, Plus } from "lucide-react";
-import { Button } from "@fitmeals/ui";
+import { Button, ToggleSwitch } from "@fitmeals/ui";
 import { api } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth-store";
 
@@ -560,22 +560,12 @@ export function CouponsContent() {
                       {row.maxUses != null ? ` / ${row.maxUses}` : ""}
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={row.isActive}
-                        onClick={() => toggleActive.mutate({ id: row.id, isActive: !row.isActive })}
+                      <ToggleSwitch
+                        checked={row.isActive}
+                        onChange={() => toggleActive.mutate({ id: row.id, isActive: !row.isActive })}
                         disabled={toggleActive.isPending}
-                        className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition ${
-                          row.isActive ? "bg-emerald-500" : "bg-slate-300"
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-6 w-6 translate-y-0.5 rounded-full bg-white shadow transition ${
-                            row.isActive ? "translate-x-5" : "translate-x-1"
-                          }`}
-                        />
-                      </button>
+                        label="Active"
+                      />
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Button

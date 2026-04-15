@@ -79,7 +79,7 @@ export function ForgotPasswordContent() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify({ email: values.email.trim().toLowerCase() }),
+                body: JSON.stringify({ email: values.email.trim().toLowerCase(), app: "customer" }),
               });
               const data = (await res.json()) as { ok?: boolean; error?: string; devResetToken?: string };
               if (!res.ok) {

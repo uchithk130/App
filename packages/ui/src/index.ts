@@ -6,3 +6,4 @@ export * from "./components/label";
 export * from "./components/skeleton";
 export * from "./components/badge";
 export * from "./components/macro-badge";
+export * from "./components/toggle-switch";

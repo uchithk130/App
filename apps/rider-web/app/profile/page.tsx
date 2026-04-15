@@ -215,9 +215,9 @@ export default function RiderProfilePage() {
         <MenuRow icon={CreditCard} label="Bank Details" href="/profile/bank-details" />
         <MenuRow icon={User} label="Edit Requests" href="/profile/edit-requests" />
         <div className="my-2 h-px bg-slate-100" />
-        <MenuRow icon={Shield} label="Security" href="/profile" />
-        <MenuRow icon={HelpCircle} label="Help Center" href="/profile" />
-        <MenuRow icon={FileText} label="Terms &amp; Privacy" href="/profile" />
+        <MenuRow icon={Shield} label="Security" href="/profile/security" />
+        <MenuRow icon={HelpCircle} label="Help Center" href="/profile/help" />
+        <MenuRow icon={FileText} label="Terms &amp; Privacy" href="/profile/terms" />
       </div>
 
       {/* Logout */}

@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum RoleCode {
@@ -164,11 +165,18 @@ model Role {
   updatedAt DateTime     @updatedAt
 }
 
+enum AppScope {
+  CUSTOMER
+  RIDER
+  ADMIN
+}
+
 model User {
   id                  String               @id @default(cuid())
-  email               String               @unique
-  phone               String?              @unique
+  email               String
+  phone               String?
   passwordHash        String
+  appScope            AppScope
   emailVerifiedAt     DateTime?
   roles               UserOnRole[]
   customerProfile     CustomerProfile?
@@ -180,6 +188,8 @@ model User {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
+  @@unique([email, appScope])
+  @@index([email])
   @@index([createdAt])
   @@index([deletedAt])
 }

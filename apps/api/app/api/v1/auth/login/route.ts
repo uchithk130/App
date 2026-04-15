@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RoleCode, RiderApprovalStatus } from "@prisma/client";
+import { AppScope, RoleCode, RiderApprovalStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { errorJson, json } from "@/lib/http";
 import { verifyPassword } from "@/lib/auth/password";
@@ -15,29 +15,53 @@ const bodySchema = z.object({
   app: z.enum(["customer", "admin", "rider"]),
 });
 
-const appRole: Record<string, RoleCode> = {
-  customer: RoleCode.CUSTOMER,
-  admin: RoleCode.ADMIN,
-  rider: RoleCode.RIDER,
+const appScopes: Record<string, AppScope> = {
+  customer: AppScope.CUSTOMER,
+  admin: AppScope.ADMIN,
+  rider: AppScope.RIDER,
 };
 
 export async function POST(req: Request) {
   try {
     const body = bodySchema.parse(await req.json());
-    const requiredRole = appRole[body.app]!;
-    const user = await prisma.user.findFirst({
-      where: { email: body.email.toLowerCase(), deletedAt: null },
+    const scope = appScopes[body.app]!;
+
+    // Look up only the user for this app scope
+    const user = await prisma.user.findUnique({
+      where: {
+        email_appScope: { email: body.email.toLowerCase(), appScope: scope },
+        deletedAt: null,
+      },
       include: { roles: { include: { role: true } } },
     });
-    if (!user) return errorJson("Invalid credentials", 401);
+
+    if (!user) {
+      if (body.app === "customer") {
+        return errorJson(
+          "No customer account found. Register as a customer first.",
+          403,
+          "NO_CUSTOMER_ROLE",
+        );
+      }
+      if (body.app === "rider") {
+        return errorJson(
+          "No rider account found. Register as a rider first.",
+          403,
+          "NO_RIDER_ROLE",
+        );
+      }
+      return errorJson("Invalid credentials", 401);
+    }
+
     const ok = await verifyPassword(body.password, user.passwordHash);
     if (!ok) return errorJson("Invalid credentials", 401);
-    const roles = user.roles.map((r) => r.role.code);
-    if (!roles.includes(requiredRole)) return errorJson("Invalid account for this app", 403);
 
+    const roles = user.roles.map((r) => r.role.code);
+
+    // Rider-specific approval checks
     if (body.app === "rider") {
       const rp = await prisma.riderProfile.findUnique({ where: { userId: user.id } });
-      if (!rp) return errorJson("Invalid account for this app", 403);
+      if (!rp) return errorJson("Rider profile not found", 403);
       if (rp.approvalStatus === RiderApprovalStatus.PENDING) {
         return errorJson("Your rider account is pending admin approval", 403, "RIDER_PENDING");
       }
@@ -61,8 +85,8 @@ export async function POST(req: Request) {
       },
     });
     await setRefreshCookie(refresh, refreshMaxAgeSeconds());
-    const accessToken = await signAccessToken({ sub: user.id, roles });
-    return json({ accessToken, expiresIn: 900, refreshToken: refresh });
+    const accessToken = await signAccessToken({ sub: user.id, roles, scope: scope });
+    return json({ accessToken, expiresIn: 900, refreshToken: refresh, roles });
   } catch (e) {
     if (e instanceof z.ZodError) return errorJson("Invalid body", 400, "VALIDATION", e.flatten());
     return errorJson("Server error", 500);

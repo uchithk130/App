@@ -8,13 +8,14 @@ const textEncoder = new TextEncoder();
 export type AccessPayload = {
   sub: string;
   roles: RoleCode[];
+  scope: string;
   typ: "access";
 };
 
 export async function signAccessToken(payload: Omit<AccessPayload, "typ">) {
   const e = env();
   const secret = textEncoder.encode(e.JWT_ACCESS_SECRET);
-  const token = await new SignJWT({ roles: payload.roles, typ: "access" })
+  const token = await new SignJWT({ roles: payload.roles, scope: payload.scope, typ: "access" })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
     .setIssuedAt()
@@ -30,8 +31,9 @@ export async function verifyAccessToken(token: string): Promise<AccessPayload | 
     const { payload } = await jwtVerify(token, secret);
     const sub = typeof payload.sub === "string" ? payload.sub : null;
     const roles = payload.roles;
+    const scope = typeof payload.scope === "string" ? payload.scope : "";
     if (!sub || !Array.isArray(roles)) return null;
-    return { sub, roles: roles as RoleCode[], typ: "access" };
+    return { sub, roles: roles as RoleCode[], scope, typ: "access" };
   } catch {
     return null;
   }

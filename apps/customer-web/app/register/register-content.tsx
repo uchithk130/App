@@ -91,9 +91,13 @@ export function RegisterContent() {
               ...(phone ? { phone } : {}),
             }),
           });
-          const data = (await res.json()) as { accessToken?: string; refreshToken?: string; error?: string };
+          const data = (await res.json()) as { accessToken?: string; refreshToken?: string; error?: string; code?: string };
           if (!res.ok) {
-            setFormError(data.error ?? "Couldn’t create your account. Try again.");
+            if (data.code === "ALREADY_CUSTOMER") {
+              setFormError("A customer account with this email already exists. Please log in.");
+            } else {
+              setFormError(data.error ?? "Couldn’t create your account. Try again.");
+            }
             return;
           }
           if (data.accessToken) {
@@ -191,9 +195,9 @@ export function RegisterContent() {
         </AuthPrimaryButton>
       </form>
 
-      <p className="mt-8">
+      <div className="mt-8">
         <AuthFooterLinkRow prompt="Already have an account?" href="/login" linkLabel="Log in" />
-      </p>
+      </div>
     </WellnessAuthShell>
   );
 }

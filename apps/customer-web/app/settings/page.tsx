@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import { ToggleSwitch } from "@fitmeals/ui";
 import { KcalViewportShell } from "@/components/kcal/kcal-viewport-shell";
 
 const KEYS = {
@@ -53,63 +54,33 @@ export default function SettingsPage() {
                 <p className="font-medium text-kcal-charcoal">Order updates</p>
                 <p className="text-xs text-kcal-muted">Push-style alerts when your order status changes</p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={orders}
-                onClick={() => {
-                  const next = !orders;
-                  setOrders(next);
-                  persist(KEYS.notifyOrders, next);
-                }}
-                className={`relative h-7 w-12 shrink-0 rounded-full transition ${orders ? "bg-kcal-sage" : "bg-neutral-200"}`}
-              >
-                <span
-                  className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${orders ? "left-5" : "left-0.5"}`}
-                />
-              </button>
+              <ToggleSwitch
+                checked={orders}
+                onChange={(next) => { setOrders(next); persist(KEYS.notifyOrders, next); }}
+                label="Order updates"
+              />
             </li>
             <li className="flex items-center justify-between gap-4 px-4 py-4">
               <div>
                 <p className="font-medium text-kcal-charcoal">Tips &amp; promos</p>
                 <p className="text-xs text-kcal-muted">Occasional meal ideas and offers</p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={promos}
-                onClick={() => {
-                  const next = !promos;
-                  setPromos(next);
-                  persist(KEYS.notifyPromos, next);
-                }}
-                className={`relative h-7 w-12 shrink-0 rounded-full transition ${promos ? "bg-kcal-sage" : "bg-neutral-200"}`}
-              >
-                <span
-                  className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${promos ? "left-5" : "left-0.5"}`}
-                />
-              </button>
+              <ToggleSwitch
+                checked={promos}
+                onChange={(next) => { setPromos(next); persist(KEYS.notifyPromos, next); }}
+                label="Tips and promos"
+              />
             </li>
             <li className="flex items-center justify-between gap-4 px-4 py-4">
               <div>
                 <p className="font-medium text-kcal-charcoal">Metric units</p>
                 <p className="text-xs text-kcal-muted">Show grams &amp; °C where relevant</p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={metric}
-                onClick={() => {
-                  const next = !metric;
-                  setMetric(next);
-                  persist(KEYS.useMetric, next);
-                }}
-                className={`relative h-7 w-12 shrink-0 rounded-full transition ${metric ? "bg-kcal-sage" : "bg-neutral-200"}`}
-              >
-                <span
-                  className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${metric ? "left-5" : "left-0.5"}`}
-                />
-              </button>
+              <ToggleSwitch
+                checked={metric}
+                onChange={(next) => { setMetric(next); persist(KEYS.useMetric, next); }}
+                label="Metric units"
+              />
             </li>
           </ul>
         </main>

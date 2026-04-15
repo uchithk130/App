@@ -1,4 +1,4 @@
-import { PrismaClient, RoleCode, OrderStatus, OrderType, PaymentStatus, RiderAvailability, RiderApprovalStatus, SubscriptionStatus, SubscriptionScheduleStatus, CustomMealRequestStatus, MealType, MealListingStatus, FitnessGoal, DietaryPreference, WalletTransactionType } from "@prisma/client";
+import { PrismaClient, RoleCode, AppScope, OrderStatus, OrderType, PaymentStatus, RiderAvailability, RiderApprovalStatus, SubscriptionStatus, SubscriptionScheduleStatus, CustomMealRequestStatus, MealType, MealListingStatus, FitnessGoal, DietaryPreference, WalletTransactionType } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -29,11 +29,12 @@ async function main() {
   ]);
 
   const adminUser = await prisma.user.upsert({
-    where: { email: "admin@fitmeals.dev" },
+    where: { email_appScope: { email: "admin@fitmeals.dev", appScope: AppScope.ADMIN } },
     update: { passwordHash: password },
     create: {
       email: "admin@fitmeals.dev",
       passwordHash: password,
+      appScope: AppScope.ADMIN,
       roles: { create: [{ roleId: roleAdmin.id }] },
       adminProfile: { create: { fullName: "Ops Admin" } },
     },
@@ -49,12 +50,13 @@ async function main() {
   });
 
   const riderUser = await prisma.user.upsert({
-    where: { email: "rider@fitmeals.dev" },
+    where: { email_appScope: { email: "rider@fitmeals.dev", appScope: AppScope.RIDER } },
     update: { passwordHash: password },
     create: {
       email: "rider@fitmeals.dev",
       phone: "+919800000001",
       passwordHash: password,
+      appScope: AppScope.RIDER,
       roles: { create: [{ roleId: roleRider.id }] },
       riderProfile: {
         create: {
@@ -78,12 +80,13 @@ async function main() {
   });
 
   const customer1 = await prisma.user.upsert({
-    where: { email: "alex@fitmeals.dev" },
+    where: { email_appScope: { email: "alex@fitmeals.dev", appScope: AppScope.CUSTOMER } },
     update: { passwordHash: password },
     create: {
       email: "alex@fitmeals.dev",
       phone: "+919800000002",
       passwordHash: password,
+      appScope: AppScope.CUSTOMER,
       roles: { create: [{ roleId: roleCustomer.id }] },
       customerProfile: {
         create: {
@@ -108,11 +111,12 @@ async function main() {
   });
 
   const customer2 = await prisma.user.upsert({
-    where: { email: "priya@fitmeals.dev" },
+    where: { email_appScope: { email: "priya@fitmeals.dev", appScope: AppScope.CUSTOMER } },
     update: { passwordHash: password },
     create: {
       email: "priya@fitmeals.dev",
       passwordHash: password,
+      appScope: AppScope.CUSTOMER,
       roles: { create: [{ roleId: roleCustomer.id }] },
       customerProfile: {
         create: {

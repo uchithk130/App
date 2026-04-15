@@ -25,7 +25,7 @@ import {
   CreditCard,
   RefreshCw,
 } from "lucide-react";
-import { Skeleton } from "@fitmeals/ui";
+import { Skeleton, ToggleSwitch } from "@fitmeals/ui";
 import { KcalAppLayout } from "@/components/kcal/kcal-app-layout";
 import { KcalViewportShell } from "@/components/kcal/kcal-viewport-shell";
 import { api } from "@/lib/api";
@@ -55,34 +55,6 @@ function readBool(key: string, fallback: boolean) {
   if (typeof window === "undefined") return fallback;
   const v = localStorage.getItem(key);
   return v === null ? fallback : v === "1";
-}
-
-/* ── Toggle Row ── */
-function ToggleRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between py-3">
-      <span className="text-sm text-slate-700">{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={value}
-        onClick={() => onChange(!value)}
-        className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${value ? "bg-emerald-500" : "bg-slate-200"}`}
-      >
-        <span
-          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition-transform ${value ? "translate-x-5" : "translate-x-0.5"}`}
-        />
-      </button>
-    </div>
-  );
 }
 
 /* ── Menu Row ── */
@@ -343,21 +315,6 @@ export default function ProfilePage() {
               <GuestCTA />
             )}
 
-            {/* Logout button for authed users */}
-            {isAuthed && profile.data && (
-              <button
-                type="button"
-                onClick={() => setLogoutOpen(true)}
-                className="mt-3 flex w-full items-center gap-3 rounded-2xl bg-rose-50 px-4 py-3.5 transition hover:bg-rose-100 active:bg-rose-100"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-rose-500 shadow-sm">
-                  <LogOut className="h-5 w-5" />
-                </span>
-                <span className="flex-1 text-left text-sm font-semibold text-rose-600">Log Out</span>
-                <ChevronRight className="h-4 w-4 text-rose-300" />
-              </button>
-            )}
-
             {/* Menu rows */}
             <div className="mt-6 space-y-1">
               <MenuRow icon={MapPin} label="My Locations" href={authHref("/locations")} />
@@ -407,71 +364,62 @@ export default function ProfilePage() {
               <div className="h-px bg-slate-100" />
 
               {/* Push Notifications */}
-              <div className="flex items-center gap-2.5 py-0.5">
-                <Bell className="mt-3 h-4 w-4 text-slate-400" />
-                <div className="flex-1">
-                  <ToggleRow
-                    label="Push Notification"
-                    value={push}
-                    onChange={(v) => {
-                      setPush(v);
-                      persistBool(PREF.push, v);
-                    }}
-                  />
+              <div className="flex items-center justify-between gap-3 py-3">
+                <div className="flex items-center gap-2.5">
+                  <Bell className="h-4 w-4 text-slate-400" />
+                  <span className="text-sm text-slate-700">Push Notification</span>
                 </div>
+                <ToggleSwitch checked={push} onChange={(v) => { setPush(v); persistBool(PREF.push, v); }} />
               </div>
 
               <div className="h-px bg-slate-100" />
 
               {/* Dark Mode */}
-              <div className="flex items-center gap-2.5 py-0.5">
-                <Moon className="mt-3 h-4 w-4 text-slate-400" />
-                <div className="flex-1">
-                  <ToggleRow
-                    label="Dark Mode"
-                    value={dark}
-                    onChange={(v) => {
-                      setDark(v);
-                      persistBool(PREF.dark, v);
-                    }}
-                  />
+              <div className="flex items-center justify-between gap-3 py-3">
+                <div className="flex items-center gap-2.5">
+                  <Moon className="h-4 w-4 text-slate-400" />
+                  <span className="text-sm text-slate-700">Dark Mode</span>
                 </div>
+                <ToggleSwitch checked={dark} onChange={(v) => { setDark(v); persistBool(PREF.dark, v); }} />
               </div>
 
               <div className="h-px bg-slate-100" />
 
               {/* Sound */}
-              <div className="flex items-center gap-2.5 py-0.5">
-                <Volume2 className="mt-3 h-4 w-4 text-slate-400" />
-                <div className="flex-1">
-                  <ToggleRow
-                    label="Sound"
-                    value={sound}
-                    onChange={(v) => {
-                      setSound(v);
-                      persistBool(PREF.sound, v);
-                    }}
-                  />
+              <div className="flex items-center justify-between gap-3 py-3">
+                <div className="flex items-center gap-2.5">
+                  <Volume2 className="h-4 w-4 text-slate-400" />
+                  <span className="text-sm text-slate-700">Sound</span>
                 </div>
+                <ToggleSwitch checked={sound} onChange={(v) => { setSound(v); persistBool(PREF.sound, v); }} />
               </div>
 
               <div className="h-px bg-slate-100" />
 
               {/* Auto Update */}
-              <div className="flex items-center gap-2.5 py-0.5">
-                <RefreshCw className="mt-3 h-4 w-4 text-slate-400" />
-                <div className="flex-1">
-                  <ToggleRow
-                    label="Automatically Updated"
-                    value={autoUpdate}
-                    onChange={(v) => {
-                      setAutoUpdate(v);
-                      persistBool(PREF.autoUpdate, v);
-                    }}
-                  />
+              <div className="flex items-center justify-between gap-3 py-3">
+                <div className="flex items-center gap-2.5">
+                  <RefreshCw className="h-4 w-4 text-slate-400" />
+                  <span className="text-sm text-slate-700">Auto Update</span>
                 </div>
+                <ToggleSwitch checked={autoUpdate} onChange={(v) => { setAutoUpdate(v); persistBool(PREF.autoUpdate, v); }} />
               </div>
             </div>
+
+            {/* Logout button for authed users */}
+            {isAuthed && profile.data && (
+              <button
+                type="button"
+                onClick={() => setLogoutOpen(true)}
+                className="mt-6 flex w-full items-center gap-3 rounded-2xl bg-rose-50 px-4 py-3.5 transition hover:bg-rose-100 active:bg-rose-100"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-rose-500 shadow-sm">
+                  <LogOut className="h-5 w-5" />
+                </span>
+                <span className="flex-1 text-left text-sm font-semibold text-rose-600">Log Out</span>
+                <ChevronRight className="h-4 w-4 text-rose-300" />
+              </button>
+            )}
           </main>
         </div>
 

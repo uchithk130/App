@@ -76,6 +76,16 @@ export default function RiderLoginPage() {
           <p className="mt-1 text-xs text-rose-600">Your rider account has been suspended. Please contact support.</p>
         </div>
       )}
+      {errCode === "NO_RIDER_ROLE" && (
+        <div className="mb-5 w-full max-w-sm rounded-2xl bg-blue-50 p-4 text-center ring-1 ring-blue-200">
+          <AlertCircle className="mx-auto mb-2 h-6 w-6 text-blue-500" />
+          <p className="text-sm font-semibold text-blue-800">No Rider Account</p>
+          <p className="mt-1 text-xs text-blue-600">
+            You don&apos;t have a rider account yet.{" "}
+            <Link href="/register" className="font-bold underline">Register as a rider</Link> to get started.
+          </p>
+        </div>
+      )}
 
       {/* Form */}
       <form onSubmit={(e) => void handleSubmit(e)} className="w-full max-w-sm space-y-4">

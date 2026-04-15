@@ -19,6 +19,7 @@ export default function RiderRegisterPage() {
   const [err, setErr] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [done, setDone] = React.useState(false);
+  const [doneMsg, setDoneMsg] = React.useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,8 +40,9 @@ export default function RiderRegisterPage() {
           vehicleNumber: vehicleNumber || undefined,
         }),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as { error?: string; message?: string; code?: string };
       if (!res.ok) { setErr(data.error ?? "Registration failed"); return; }
+      setDoneMsg(data.message ?? "Application submitted!");
       setDone(true);
     } finally {
       setLoading(false);
@@ -54,9 +56,7 @@ export default function RiderRegisterPage() {
           <CheckCircle2 className="h-8 w-8 text-emerald-500" />
         </div>
         <h1 className="text-xl font-bold text-slate-900">Application Submitted!</h1>
-        <p className="mt-2 max-w-xs text-sm text-slate-500">
-          Your rider application is pending admin approval. You will be able to sign in once approved.
-        </p>
+        <p className="mt-2 max-w-xs text-sm text-slate-500">{doneMsg}</p>
         <Link
           href="/login"
           className="mt-6 rounded-xl bg-amber-500 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-amber-600"

@@ -19,7 +19,8 @@ export async function POST(req: Request) {
     });
     if (!session?.user || session.user.deletedAt) return errorJson("Invalid session", 401);
     const roles = session.user.roles.map((r) => r.role.code);
-    const accessToken = await signAccessToken({ sub: session.user.id, roles });
+    const scope = session.user.appScope;
+    const accessToken = await signAccessToken({ sub: session.user.id, roles, scope });
     return json({ accessToken, expiresIn: 900 });
   } catch {
     return errorJson("Server error", 500);
