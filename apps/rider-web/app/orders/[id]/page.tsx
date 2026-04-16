@@ -14,6 +14,8 @@ import {
   CreditCard,
   Package,
   Clock,
+  Store,
+  CheckCircle2,
 } from "lucide-react";
 import { buildGoogleMapsUrl } from "@fitmeals/utils";
 import { api } from "@/lib/api";
@@ -31,18 +33,32 @@ type RiderOrderDetail = {
   allowedNext: string[];
 };
 
+type StoreLocation = { name: string; address: string; lat: number; lng: number };
+
 const STATUS_LABELS: Record<string, string> = {
   ASSIGNED: "Assigned",
+  PICKED_UP: "Picked Up",
   OUT_FOR_DELIVERY: "On the Way",
   DELIVERED: "Delivered",
   FAILED_DELIVERY: "Failed",
 };
 
-const SWIPE_CONFIG: Record<string, { label: string; variant: "amber" | "green" | "red" }> = {
-  OUT_FOR_DELIVERY: { label: "Swipe to start delivery", variant: "amber" },
-  DELIVERED: { label: "Swipe to confirm delivered", variant: "green" },
-  FAILED_DELIVERY: { label: "Swipe to mark failed", variant: "red" },
+const STATUS_COLORS: Record<string, string> = {
+  ASSIGNED: "text-amber-600",
+  PICKED_UP: "text-blue-600",
+  OUT_FOR_DELIVERY: "text-orange-600",
+  DELIVERED: "text-emerald-600",
+  FAILED_DELIVERY: "text-red-600",
 };
+
+const SWIPE_CONFIG: Record<string, { label: string; variant: "amber" | "green" | "red" }> = {
+  PICKED_UP: { label: "Swipe — Picked up from counter", variant: "amber" },
+  OUT_FOR_DELIVERY: { label: "Swipe — On the way to customer", variant: "amber" },
+  DELIVERED: { label: "Swipe — Delivered to customer", variant: "green" },
+  FAILED_DELIVERY: { label: "Swipe — Delivery failed", variant: "red" },
+};
+
+const STATUS_STEPS = ["ASSIGNED", "PICKED_UP", "OUT_FOR_DELIVERY", "DELIVERED"];
 
 function formatAddr(a: Record<string, unknown>) {
   return [a.line1, a.line2, a.city, a.pincode].filter(Boolean).join(", ") || "Address";
@@ -54,6 +70,32 @@ function buildMapsUrl(a: Record<string, unknown>) {
     lng: a.lng ? Number(a.lng) : undefined,
     address: [a.line1, a.city, a.pincode].filter(Boolean).join(", "),
   });
+}
+
+function buildStoreUrl(s: StoreLocation) {
+  return buildGoogleMapsUrl({ lat: s.lat, lng: s.lng, address: s.address });
+}
+
+function ProgressSteps({ current }: { current: string }) {
+  const idx = STATUS_STEPS.indexOf(current);
+  return (
+    <div className="flex items-center gap-1 px-1">
+      {STATUS_STEPS.map((step, i) => (
+        <React.Fragment key={step}>
+          <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold transition ${
+            i <= idx
+              ? "bg-emerald-500 text-white"
+              : "bg-slate-200 text-slate-400"
+          }`}>
+            {i < idx ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
+          </div>
+          {i < STATUS_STEPS.length - 1 && (
+            <div className={`h-0.5 flex-1 rounded-full transition ${i < idx ? "bg-emerald-500" : "bg-slate-200"}`} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
 }
 
 export default function RiderOrderPage() {
@@ -79,10 +121,19 @@ export default function RiderOrderPage() {
     queryKey: ["rider-order", orderId],
     queryFn: () => api<RiderOrderDetail>(`/api/v1/rider/orders/${orderId}`),
     enabled: ready && !!orderId && !!getAccessToken(),
+    refetchInterval: 5_000,
+  });
+
+  const storeQ = useQuery({
+    queryKey: ["store-location"],
+    queryFn: () => api<{ location: StoreLocation | null }>("/api/v1/store-location"),
+    enabled: ready && !!getAccessToken(),
+    staleTime: 60_000,
   });
 
   const d = detail.data;
   const addr = d?.addressSnapshot ?? {};
+  const store = storeQ.data?.location;
   const nextAction = d?.allowedNext?.[0];
   const swipe = nextAction ? SWIPE_CONFIG[nextAction] : undefined;
 
@@ -96,7 +147,7 @@ export default function RiderOrderPage() {
       }),
     });
     setToast("Status updated!");
-    void qc.invalidateQueries({ queryKey: ["rider-order", orderId] });
+    await qc.invalidateQueries({ queryKey: ["rider-order", orderId] });
     void qc.invalidateQueries({ queryKey: ["rider-orders"] });
     void qc.invalidateQueries({ queryKey: ["rider-me"] });
     if (nextAction === "DELIVERED" || nextAction === "FAILED_DELIVERY") {
@@ -117,7 +168,7 @@ export default function RiderOrderPage() {
         <div className="flex-1">
           <h1 className="text-sm font-bold text-slate-900">Order #{orderId.slice(0, 8)}</h1>
           {d && (
-            <span className={`text-[10px] font-bold ${d.status === "OUT_FOR_DELIVERY" ? "text-orange-600" : d.status === "DELIVERED" ? "text-emerald-600" : "text-amber-600"}`}>
+            <span className={`text-[10px] font-bold ${STATUS_COLORS[d.status] ?? "text-slate-600"}`}>
               {STATUS_LABELS[d.status] ?? d.status}
             </span>
           )}
@@ -132,6 +183,23 @@ export default function RiderOrderPage() {
         </div>
       ) : d ? (
         <div className="space-y-4 p-5">
+          {/* Progress tracker */}
+          <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Progress</h3>
+              <span className={`text-[10px] font-bold ${STATUS_COLORS[d.status] ?? ""}`}>
+                {STATUS_LABELS[d.status] ?? d.status}
+              </span>
+            </div>
+            <ProgressSteps current={d.status} />
+            <div className="mt-2 flex justify-between text-[9px] text-slate-400">
+              <span>Accepted</span>
+              <span>Picked Up</span>
+              <span>On Way</span>
+              <span>Delivered</span>
+            </div>
+          </div>
+
           {/* Customer card */}
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
             <div className="mb-3 flex items-center gap-3">
@@ -156,8 +224,6 @@ export default function RiderOrderPage() {
                 </a>
               )}
             </div>
-
-            {/* Delivery address */}
             <div className="rounded-xl bg-slate-50 p-3">
               <div className="flex items-start gap-2">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
@@ -166,30 +232,56 @@ export default function RiderOrderPage() {
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="grid grid-cols-2 gap-3">
-            <a
-              href={buildMapsUrl(addr)}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center justify-center gap-2 rounded-2xl bg-amber-500 px-4 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-amber-600"
-            >
-              <Navigation className="h-4 w-4" />
-              Navigate
-            </a>
-            {d.customer.user.phone ? (
+          {/* Navigation buttons */}
+          <div className="space-y-2">
+            {/* Navigate to Counter/Store */}
+            {store && (d.status === "ASSIGNED" || d.status === "PICKED_UP") && (
+              <a
+                href={buildStoreUrl(store)}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3.5 text-white shadow-sm transition hover:from-blue-600 hover:to-blue-700"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20">
+                  <Store className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold">Navigate to Counter</p>
+                  <p className="truncate text-xs text-blue-100">{store.name} • {store.address}</p>
+                </div>
+                <Navigation className="h-5 w-5 shrink-0" />
+              </a>
+            )}
+
+            {/* Navigate to Customer */}
+            {(d.status === "PICKED_UP" || d.status === "OUT_FOR_DELIVERY") && (
+              <a
+                href={buildMapsUrl(addr)}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3.5 text-white shadow-sm transition hover:from-amber-600 hover:to-orange-600"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20">
+                  <MapPin className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold">Navigate to Customer</p>
+                  <p className="truncate text-xs text-amber-100">{formatAddr(addr)}</p>
+                </div>
+                <Navigation className="h-5 w-5 shrink-0" />
+              </a>
+            )}
+
+            {/* Call customer */}
+            {d.customer.user.phone && (
               <a
                 href={`tel:${d.customer.user.phone}`}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3.5 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50"
+                className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50"
               >
                 <Phone className="h-4 w-4" />
-                Call Customer
+                <span className="flex-1 text-sm font-bold">Call Customer</span>
+                <span className="text-xs text-slate-400">{d.customer.user.phone}</span>
               </a>
-            ) : (
-              <div className="flex items-center justify-center gap-2 rounded-2xl bg-slate-100 px-4 py-3.5 text-sm font-bold text-slate-400">
-                <Phone className="h-4 w-4" />
-                No phone
-              </div>
             )}
           </div>
 
@@ -235,6 +327,7 @@ export default function RiderOrderPage() {
           {/* All done */}
           {d.status === "DELIVERED" && (
             <div className="rounded-2xl bg-emerald-50 p-4 text-center">
+              <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-emerald-500" />
               <p className="text-sm font-bold text-emerald-700">Delivery Completed!</p>
               <p className="text-xs text-emerald-600">Great job. Head back for the next one.</p>
             </div>

@@ -37,7 +37,7 @@ export function middleware(req: NextRequest) {
   const headers = new Headers();
   headers.set("Access-Control-Allow-Origin", allowOrigin);
   headers.set("Access-Control-Allow-Credentials", "true");
-  headers.set("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+  headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
   headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") {

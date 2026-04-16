@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 
 const RIDER_ACTIONS = [
+  OrderStatus.PICKED_UP,
   OrderStatus.OUT_FOR_DELIVERY,
   OrderStatus.DELIVERED,
   OrderStatus.FAILED_DELIVERY,

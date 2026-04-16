@@ -44,12 +44,30 @@ export async function POST(req: Request) {
 
       const address = await tx.address.findFirst({
         where: { id: body.addressId, customerId: profile.id },
-        include: { zone: true },
       });
-      if (!address?.zoneId || !address.zone?.isActive) throw new Error("ADDRESS_ZONE");
+      if (!address) throw new Error("ADDRESS_ZONE");
+
+      // Re-resolve zone at checkout time (handles addresses created before zones were configured)
+      let zoneId = address.zoneId;
+      if (!zoneId) {
+        const zonePin = await tx.zonePincode.findFirst({
+          where: { pincode: address.pincode },
+          include: { zone: true },
+        });
+        if (zonePin?.zone?.isActive) {
+          zoneId = zonePin.zoneId;
+          // Backfill the address so future checkouts are faster
+          await tx.address.update({ where: { id: address.id }, data: { zoneId } });
+        }
+      }
+
+      const zone = zoneId
+        ? await tx.serviceableZone.findFirst({ where: { id: zoneId, isActive: true } })
+        : null;
+      if (!zone) throw new Error("ADDRESS_ZONE");
 
       const pinOk = await tx.zonePincode.findFirst({
-        where: { zoneId: address.zoneId, pincode: address.pincode },
+        where: { zoneId: zone.id, pincode: address.pincode },
       });
       if (!pinOk) throw new Error("PINCODE");
 
@@ -59,7 +77,7 @@ export async function POST(req: Request) {
           where: { id: body.slotId, isActive: true },
         });
         if (!s) throw new Error("SLOT");
-        if (s.zoneId && s.zoneId !== address.zoneId) throw new Error("SLOT_ZONE");
+        if (s.zoneId && s.zoneId !== zoneId) throw new Error("SLOT_ZONE");
         if (s.booked >= s.capacity) throw new Error("SLOT_FULL");
         await tx.deliverySlot.update({
           where: { id: s.id },
@@ -96,7 +114,7 @@ export async function POST(req: Request) {
           customerProfileId: profile.id,
           customerOrderCount,
           customerUsageCount,
-          deliveryFee: address.zone.baseDeliveryFee,
+          deliveryFee: zone.baseDeliveryFee,
         });
         if (!applied.ok) {
           throw new Error(applied.code);
@@ -110,12 +128,12 @@ export async function POST(req: Request) {
         });
       }
 
-      const rawDeliveryFee = address.zone.baseDeliveryFee;
+      const rawDeliveryFee = zone.baseDeliveryFee;
       const deliveryFee = rawDeliveryFee.sub(shippingDiscount).lt(0) ? new Prisma.Decimal(0) : rawDeliveryFee.sub(shippingDiscount);
       const afterDiscount = subtotal.sub(discount);
-      if (afterDiscount.lt(address.zone.minOrderAmount)) throw new Error("MIN_ORDER");
+      if (afterDiscount.lt(zone.minOrderAmount)) throw new Error("MIN_ORDER");
 
-      const taxRate = address.zone.taxRatePercent ?? new Prisma.Decimal(0);
+      const taxRate = zone.taxRatePercent ?? new Prisma.Decimal(0);
       const taxable = afterDiscount.add(deliveryFee);
       const tax = taxable.mul(taxRate).div(100);
       const total = afterDiscount.add(deliveryFee).add(tax);
@@ -125,7 +143,7 @@ export async function POST(req: Request) {
           customerId: profile.id,
           type: OrderType.ONE_TIME,
           status: OrderStatus.PENDING_PAYMENT,
-          zoneId: address.zoneId,
+          zoneId: zoneId!,
           addressSnapshot: {
             line1: address.line1,
             line2: address.line2,

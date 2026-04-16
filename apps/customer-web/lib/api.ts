@@ -20,7 +20,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken: refresh }),
+        body: JSON.stringify({ refreshToken: refresh, app: "customer" }),
       });
       if (r.ok) {
         const j = (await r.json()) as { accessToken: string };

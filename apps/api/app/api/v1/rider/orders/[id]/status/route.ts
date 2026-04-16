@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { errorJson, json } from "@/lib/http";
 import { requireRider, AuthError } from "@/lib/auth/rider";
 import { transitionOrderStatus, canRiderTransition } from "@/lib/services/order-transition";
+import { createNotification } from "@/lib/services/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,20 @@ export async function PATCH(req: Request, ctx: Params) {
         }
       }
     });
+
+    // Notify customer on delivery
+    if (body.status === OrderStatus.DELIVERED) {
+      const fullOrder = await prisma.order.findUnique({ where: { id: orderId }, include: { customer: true } });
+      if (fullOrder?.customer) {
+        void createNotification({
+          userId: fullOrder.customer.userId,
+          type: "order.delivered",
+          title: "Order delivered!",
+          body: `Your order #${orderId.slice(-6).toUpperCase()} has been delivered`,
+          data: { orderId },
+        });
+      }
+    }
 
     return json({ ok: true });
   } catch (e) {

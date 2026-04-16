@@ -56,9 +56,13 @@ function formatInr(n: string) {
 }
 
 export function HomeScreen() {
+const [mounted, setMounted] = React.useState(false);
 const [carousel, setCarousel] = React.useState(0);
 const feed = useQuery({ queryKey: ["home-feed"], queryFn: fetchHome });
-const authed = typeof window !== "undefined" && !!getAccessToken();
+
+React.useEffect(() => { setMounted(true); }, []);
+
+const authed = mounted && !!getAccessToken();
 const cart = useQuery({
   queryKey: ["cart"],
   queryFn: () => api<{ items: { quantity: number }[] }>("/api/v1/cart"),
@@ -90,6 +94,7 @@ const cartCount = cart.data?.items.reduce((s, i) => s + i.quantity, 0) ?? 0;
   // 2. Not logged in -> use localStorage (guest location)
   // 3. No address at all -> null
   const loc = React.useMemo<StoredDeliveryLocation | null>(() => {
+    if (!mounted) return null;
     if (authed && addressesQ.data?.items.length) {
       const items = addressesQ.data.items;
       const picked = items.find((a) => a.isDefault) ?? items[0];
@@ -109,7 +114,7 @@ const cartCount = cart.data?.items.reduce((s, i) => s + i.quantity, 0) ?? 0;
     }
     // Guest or no backend addresses: fall back to localStorage
     return readStoredLocation();
-  }, [authed, addressesQ.data]);
+  }, [mounted, authed, addressesQ.data]);
 
   const promos = feed.data?.promos ?? [];
   const categories = feed.data?.categories ?? [];

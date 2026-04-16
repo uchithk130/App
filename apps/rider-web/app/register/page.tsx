@@ -4,11 +4,17 @@ import * as React from "react";
 import Link from "next/link";
 import { Truck, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { API_BASE } from "@/lib/config";
-import { useGuestOnly } from "@/lib/use-guest-only";
+import { GuestOnly } from "@/lib/use-guest-only";
 
 export default function RiderRegisterPage() {
-  const redirecting = useGuestOnly();
-  if (redirecting) return null;
+  return (
+    <GuestOnly>
+      <RiderRegisterForm />
+    </GuestOnly>
+  );
+}
+
+function RiderRegisterForm() {
   const [fullName, setFullName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [phone, setPhone] = React.useState("");

@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { kcalMainNavItems } from "@/components/kcal/kcal-nav-config";
+import { useUnreadCount } from "@/lib/use-notifications";
 
 export function CustomerBottomNav() {
-  const pathname = usePathname();
+const pathname = usePathname();
+const unread = useUnreadCount();
+const unreadCount = unread.data?.count ?? 0;
 
   return (
     <nav
@@ -33,8 +36,13 @@ export function CustomerBottomNav() {
                     <Icon className="h-6 w-6" strokeWidth={2.2} aria-hidden />
                   </span>
                 ) : (
-                  <span className="flex h-9 w-9 items-center justify-center">
+                  <span className="relative flex h-9 w-9 items-center justify-center">
                     <Icon className="h-6 w-6" strokeWidth={active ? 2.4 : 1.8} aria-hidden />
+                    {t.href === "/notifications" && unreadCount > 0 && (
+                      <span className="absolute -right-0.5 top-0 flex min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 py-0.5 text-[9px] font-bold leading-none text-white">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
                   </span>
                 )}
                 <span className={homeLift ? "mt-7" : active ? "mt-0.5" : ""}>{t.label}</span>

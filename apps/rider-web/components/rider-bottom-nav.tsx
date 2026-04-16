@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ClipboardList, Wallet, User } from "lucide-react";
+import { Home, ClipboardList, Bell, Wallet, User } from "lucide-react";
+import { useUnreadCount } from "@/lib/use-notifications";
 
 const tabs = [
   { href: "/", icon: Home, label: "Home", match: (p: string) => p === "/" },
   { href: "/orders", icon: ClipboardList, label: "Orders", match: (p: string) => p.startsWith("/orders") },
+  { href: "/notifications", icon: Bell, label: "Alerts", match: (p: string) => p.startsWith("/notifications") },
   { href: "/wallet", icon: Wallet, label: "Wallet", match: (p: string) => p.startsWith("/wallet") },
   { href: "/profile", icon: User, label: "Profile", match: (p: string) => p.startsWith("/profile") },
 ] as const;
 
 export function RiderBottomNav() {
-  const pathname = usePathname();
+const pathname = usePathname();
+const unread = useUnreadCount();
+const unreadCount = unread.data?.count ?? 0;
 
   return (
     <nav
@@ -32,10 +36,15 @@ export function RiderBottomNav() {
                   active ? "text-amber-600" : "text-slate-400"
                 }`}
               >
-                <span className={`flex h-8 w-8 items-center justify-center rounded-xl transition ${
+                <span className={`relative flex h-8 w-8 items-center justify-center rounded-xl transition ${
                   active ? "bg-amber-100 text-amber-600" : ""
                 }`}>
                   <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 1.8} />
+                  {t.href === "/notifications" && unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-0.5 flex min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 py-0.5 text-[9px] font-bold leading-none text-white">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
                 </span>
                 <span>{t.label}</span>
               </Link>

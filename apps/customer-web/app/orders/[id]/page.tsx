@@ -41,7 +41,8 @@ const TRACKING_STEPS = [
   { status: "PREPARING", label: "Preparing" },
   { status: "READY_FOR_PICKUP", label: "Ready for Pickup" },
   { status: "ASSIGNED", label: "Rider Assigned" },
-  { status: "OUT_FOR_DELIVERY", label: "On the Way" },
+  { status: "PICKED_UP", label: "Picked Up from Counter" },
+  { status: "OUT_FOR_DELIVERY", label: "On the Way to You" },
   { status: "DELIVERED", label: "Delivered" },
 ] as const;
 

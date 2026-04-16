@@ -5,9 +5,11 @@ import { clearRefreshCookie, getRefreshCookie } from "@/lib/auth/cookies";
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
-    const raw = await getRefreshCookie();
+    const body = (await req.json().catch(() => null)) as { app?: string } | null;
+    const app = body?.app;
+    const raw = await getRefreshCookie(app);
     if (raw) {
       const tokenHash = hashRefreshToken(raw);
       await prisma.session.updateMany({
@@ -15,7 +17,7 @@ export async function POST() {
         data: { revokedAt: new Date(), revokeReason: "user_logout" },
       });
     }
-    await clearRefreshCookie();
+    await clearRefreshCookie(app);
     return json({ ok: true });
   } catch {
     return errorJson("Server error", 500);

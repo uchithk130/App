@@ -29,6 +29,13 @@ export function SwipeToConfirm({ label, onConfirm, disabled, variant = "amber" }
   const THUMB = 56;
   const THRESHOLD = 0.75;
 
+  // Reset when the action changes (e.g. PICKED_UP ? OUT_FOR_DELIVERY)
+  React.useEffect(() => {
+    setDone(false);
+    setOffset(0);
+    setLoading(false);
+  }, [label]);
+
   React.useEffect(() => {
     if (trackRef.current) {
       maxOffset.current = trackRef.current.clientWidth - THUMB - 8;

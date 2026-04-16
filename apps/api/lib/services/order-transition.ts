@@ -6,10 +6,11 @@ const forward: Record<OrderStatus, OrderStatus[]> = {
   DRAFT: [OrderStatus.PENDING_PAYMENT],
   PENDING_PAYMENT: [OrderStatus.PAID, OrderStatus.CANCELLED],
   PAID: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED, OrderStatus.REFUNDED],
-  CONFIRMED: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
-  PREPARING: [OrderStatus.READY_FOR_PICKUP, OrderStatus.CANCELLED],
+  CONFIRMED: [OrderStatus.PREPARING, OrderStatus.ASSIGNED, OrderStatus.CANCELLED],
+  PREPARING: [OrderStatus.READY_FOR_PICKUP, OrderStatus.ASSIGNED, OrderStatus.CANCELLED],
   READY_FOR_PICKUP: [OrderStatus.ASSIGNED, OrderStatus.CANCELLED],
-  ASSIGNED: [OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED],
+  ASSIGNED: [OrderStatus.PICKED_UP, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED],
+  PICKED_UP: [OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED],
   OUT_FOR_DELIVERY: [OrderStatus.DELIVERED, OrderStatus.FAILED_DELIVERY, OrderStatus.CANCELLED],
   DELIVERED: [OrderStatus.REFUNDED],
   FAILED_DELIVERY: [OrderStatus.CANCELLED, OrderStatus.REFUNDED],
@@ -34,6 +35,7 @@ const ADMIN_ALLOWED_TARGETS: Set<OrderStatus> = new Set([
 
 /** Statuses only a rider may set. */
 const RIDER_ALLOWED_TARGETS: Set<OrderStatus> = new Set([
+  OrderStatus.PICKED_UP,
   OrderStatus.OUT_FOR_DELIVERY,
   OrderStatus.DELIVERED,
   OrderStatus.FAILED_DELIVERY,

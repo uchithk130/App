@@ -3,10 +3,22 @@ import { env } from "../env";
 
 export const REFRESH_COOKIE = "fitmeals_refresh";
 
-export async function setRefreshCookie(token: string, maxAgeSeconds: number) {
+/** App-scoped cookie names to prevent cross-app token contamination */
+const SCOPED_COOKIES: Record<string, string> = {
+  customer: "fitmeals_refresh_customer",
+  admin: "fitmeals_refresh_admin",
+  rider: "fitmeals_refresh_rider",
+};
+
+export function cookieNameForApp(app?: string): string {
+  return (app && SCOPED_COOKIES[app]) || REFRESH_COOKIE;
+}
+
+export async function setRefreshCookie(token: string, maxAgeSeconds: number, app?: string) {
   const e = env();
   const store = await cookies();
-  store.set(REFRESH_COOKIE, token, {
+  const name = cookieNameForApp(app);
+  store.set(name, token, {
     httpOnly: true,
     secure: e.NODE_ENV === "production",
     sameSite: "lax",
@@ -16,10 +28,11 @@ export async function setRefreshCookie(token: string, maxAgeSeconds: number) {
   });
 }
 
-export async function clearRefreshCookie() {
+export async function clearRefreshCookie(app?: string) {
   const e = env();
   const store = await cookies();
-  store.set(REFRESH_COOKIE, "", {
+  const name = cookieNameForApp(app);
+  store.set(name, "", {
     httpOnly: true,
     secure: e.NODE_ENV === "production",
     sameSite: "lax",
@@ -29,7 +42,16 @@ export async function clearRefreshCookie() {
   });
 }
 
-export async function getRefreshCookie() {
+export async function getRefreshCookie(app?: string) {
   const store = await cookies();
+  if (app) {
+    const name = cookieNameForApp(app);
+    return store.get(name)?.value ?? null;
+  }
+  // Fallback: check all scoped cookies, then legacy
+  for (const name of Object.values(SCOPED_COOKIES)) {
+    const val = store.get(name)?.value;
+    if (val) return val;
+  }
   return store.get(REFRESH_COOKIE)?.value ?? null;
 }

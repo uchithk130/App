@@ -16,7 +16,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken: refresh }),
+        body: JSON.stringify({ refreshToken: refresh, app: "rider" }),
       });
       if (r.ok) {
         const j = (await r.json()) as { accessToken: string };
@@ -26,10 +26,12 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
         if (retry.ok) return (await retry.json()) as T;
         res = retry;
       } else {
-        clearTokens();
-      }
-    } else {
       clearTokens();
+      if (typeof window !== "undefined") window.location.href = "/login";
+    }
+  } else {
+      clearTokens();
+      if (typeof window !== "undefined") window.location.href = "/login";
     }
   }
 

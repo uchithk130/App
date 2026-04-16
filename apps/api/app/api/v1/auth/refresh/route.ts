@@ -6,11 +6,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
-    let raw = await getRefreshCookie();
-    if (!raw) {
-      const body = (await req.json().catch(() => null)) as { refreshToken?: string } | null;
-      if (body?.refreshToken) raw = body.refreshToken;
-    }
+    const body = (await req.json().catch(() => null)) as { refreshToken?: string; app?: string } | null;
+    let raw = body?.refreshToken ?? null;
+    if (!raw) raw = await getRefreshCookie(body?.app);
     if (!raw) return errorJson("No session", 401);
     const tokenHash = hashRefreshToken(raw);
     const session = await prisma.session.findFirst({

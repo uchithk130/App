@@ -34,6 +34,7 @@ import { API_BASE } from "@/lib/config";
 import { api } from "@/lib/api";
 import { AdminHeaderIconMenu } from "@/components/admin-header-icon-menu";
 import { MOCK_MESSAGES, MOCK_NOTIFICATIONS } from "@/lib/admin-header-mock";
+import { useUnreadCount, useNotifications as useAdminNotifications } from "@/lib/use-notifications";
 
 const dashGroup = [
   { href: "/", label: "Dashboard", Icon: LayoutGrid },
@@ -70,6 +71,7 @@ const otherNav = [
   },
   { label: "System", items: [
     { href: "/zones", label: "Delivery Zones", Icon: MapPin },
+    { href: "/store-location", label: "Store Location", Icon: MapPin },
     { href: "/settings", label: "Settings", Icon: Settings },
   ] },
 ] as const;
@@ -131,6 +133,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => setMounted(true), []);
+
+  const notifCount = useUnreadCount();
+  const adminNotifs = useAdminNotifications();
+  const notifItems = (adminNotifs.data?.items ?? []).slice(0, 5).map((n) => ({
+    id: n.id,
+    title: n.title,
+    subtitle: n.body ?? undefined,
+    href: "/notifications",
+  }));
 
   const me = useQuery({
     queryKey: ["admin-me"],
@@ -303,9 +314,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-1 sm:gap-2">
             <AdminHeaderIconMenu
               icon={Bell}
-              count={MOCK_NOTIFICATIONS.length}
+              count={notifCount.data?.count ?? 0}
               menuTitle="Notifications"
-              items={MOCK_NOTIFICATIONS}
+              items={notifItems}
               viewAllHref="/notifications"
             />
             <AdminHeaderIconMenu

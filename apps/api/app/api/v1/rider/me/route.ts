@@ -21,7 +21,7 @@ export async function GET(req: Request) {
       prisma.order.count({
         where: {
           assignment: { riderId: profile.id, unassignedAt: null },
-          status: { in: [OrderStatus.ASSIGNED, OrderStatus.OUT_FOR_DELIVERY] },
+          status: { in: [OrderStatus.ASSIGNED, OrderStatus.PICKED_UP, OrderStatus.OUT_FOR_DELIVERY] },
         },
       }),
       prisma.order.count({

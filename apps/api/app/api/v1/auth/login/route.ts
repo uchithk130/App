@@ -84,7 +84,7 @@ export async function POST(req: Request) {
         ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
       },
     });
-    await setRefreshCookie(refresh, refreshMaxAgeSeconds());
+    await setRefreshCookie(refresh, refreshMaxAgeSeconds(), body.app);
     const accessToken = await signAccessToken({ sub: user.id, roles, scope: scope });
     return json({ accessToken, expiresIn: 900, refreshToken: refresh, roles });
   } catch (e) {

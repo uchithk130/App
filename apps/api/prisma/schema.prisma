@@ -30,6 +30,7 @@ enum OrderStatus {
   PREPARING
   READY_FOR_PICKUP
   ASSIGNED
+  PICKED_UP
   OUT_FOR_DELIVERY
   DELIVERED
   FAILED_DELIVERY
@@ -187,6 +188,7 @@ model User {
   adminProfile        AdminProfile?
   sessions            Session[]
   passwordResetTokens PasswordResetToken[]
+  notifications       Notification[]
   deletedAt           DateTime?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -989,6 +991,20 @@ model NotificationLog {
 
   @@index([channel, status, createdAt])
   @@index([riderId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String?
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt, createdAt])
 }
 
 model Banner {

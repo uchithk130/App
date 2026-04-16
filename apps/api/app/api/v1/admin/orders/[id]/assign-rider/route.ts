@@ -7,6 +7,7 @@ import { getWhatsAppProvider } from "@/lib/integrations/whatsapp";
 import { buildGoogleMapsUrl } from "@fitmeals/utils";
 import { writeAudit } from "@/lib/services/audit";
 import { canTransition, transitionOrderStatus } from "@/lib/services/order-transition";
+import { createNotification } from "@/lib/services/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,24 @@ export async function POST(req: Request, ctx: Params) {
       entityId: orderId,
       after: { riderProfileId: rider.id },
       ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim(),
+    });
+
+    // Notify rider
+    void createNotification({
+      userId: rider.user.id,
+      type: "order.assigned",
+      title: "New delivery assigned",
+      body: `Order #${orderId.slice(-6).toUpperCase()} for ${order.customer.fullName}`,
+      data: { orderId },
+    });
+
+    // Notify customer
+    void createNotification({
+      userId: order.customer.user.id,
+      type: "order.rider_assigned",
+      title: "Rider on the way!",
+      body: `${rider.fullName} has been assigned to your order`,
+      data: { orderId, riderName: rider.fullName },
     });
 
     return json({ ok: true });
