@@ -17,6 +17,7 @@ import { AuthFooterLinkRow } from "@/components/auth/auth-footer-links";
 import { API_BASE } from "@/lib/config";
 import { setTokens } from "@/lib/auth-store";
 import { safeAuthRedirect } from "@/lib/auth-redirect";
+import { useGuestOnly } from "@/lib/use-guest-only";
 
 const schema = z.object({
   email: z.string().min(1, "Enter your email").email("Enter a valid email"),
@@ -26,9 +27,11 @@ const schema = z.object({
 type Form = z.infer<typeof schema>;
 
 export function LoginContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectTo = safeAuthRedirect(searchParams.get("redirect"));
+const router = useRouter();
+const searchParams = useSearchParams();
+const redirectTo = safeAuthRedirect(searchParams.get("redirect"));
+const redirecting = useGuestOnly(redirectTo);
+if (redirecting) return null;
 
   const [formError, setFormError] = React.useState<string | null>(null);
 

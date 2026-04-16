@@ -82,7 +82,15 @@ export async function POST(req: Request) {
           data: { isDefault: false },
         });
       }
-      return tx.address.create({ data });
+
+      // Match pincode to a serviceable zone
+      const zonePin = await tx.zonePincode.findFirst({
+        where: { pincode: data.pincode },
+        include: { zone: true },
+      });
+      const zoneId = zonePin?.zone?.isActive ? zonePin.zoneId : null;
+
+      return tx.address.create({ data: { ...data, zoneId } });
     });
 
     return json({ item: mapRow(created) });

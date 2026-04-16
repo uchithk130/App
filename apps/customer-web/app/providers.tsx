@@ -1,16 +1,27 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { getAccessToken } from "@/lib/auth-store";
 import { setCustomerLoggedInCookie } from "@/lib/kcal-gate-cookies";
 
+let _qc: QueryClient | null = null;
+
+/** Get the app-wide QueryClient (for cache clearing on logout). */
+export function getQueryClient(): QueryClient | null {
+  return _qc;
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [client] = useState(() => new QueryClient());
+  const clientRef = useRef<QueryClient | null>(null);
+  if (!clientRef.current) {
+    clientRef.current = new QueryClient();
+    _qc = clientRef.current;
+  }
 
   useEffect(() => {
     if (getAccessToken()) setCustomerLoggedInCookie();
   }, []);
 
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return <QueryClientProvider client={clientRef.current}>{children}</QueryClientProvider>;
 }

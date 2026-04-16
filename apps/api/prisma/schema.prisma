@@ -1,10 +1,13 @@
 generator client {
   provider = "prisma-client-js"
+
 }
 
 datasource db {
   provider = "postgresql"
   url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+
 
 }
 
@@ -205,14 +208,17 @@ model UserOnRole {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique
-  userAgent String?
-  ip        String?
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash    String    @unique
+  userAgent    String?
+  ip           String?
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  revokeReason String?
+  lastSeenAt   DateTime  @default(now())
+  createdAt    DateTime  @default(now())
 
   @@index([userId])
   @@index([expiresAt])

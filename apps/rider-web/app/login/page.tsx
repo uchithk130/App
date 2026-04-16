@@ -6,8 +6,11 @@ import { useRouter } from "next/navigation";
 import { Truck, Eye, EyeOff, AlertCircle, Clock } from "lucide-react";
 import { API_BASE } from "@/lib/config";
 import { setTokens } from "@/lib/auth-store";
+import { useGuestOnly } from "@/lib/use-guest-only";
 
 export default function RiderLoginPage() {
+  const redirecting = useGuestOnly();
+  if (redirecting) return null;
   const router = useRouter();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");

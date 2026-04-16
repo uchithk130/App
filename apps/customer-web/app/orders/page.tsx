@@ -264,7 +264,7 @@ export default function OrdersPage() {
             </div>
 
             {/* Status chips */}
-            <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
+            <div className="flex gap-2 overflow-x-auto px-4 py-3 scrollbar-none">
               {STATUS_TABS.map((tab) => (
                 <button
                   key={tab.key}

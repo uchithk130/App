@@ -26,6 +26,7 @@ import {
   Tag,
   Layers,
   FileText,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@fitmeals/ui";
 import { clearTokens, getAccessToken } from "@/lib/auth-store";
@@ -67,7 +68,10 @@ const otherNav = [
       { href: "/coupons", label: "Coupons", Icon: Tag },
     ],
   },
-  { label: "System", items: [{ href: "/settings", label: "Settings", Icon: Settings }] },
+  { label: "System", items: [
+    { href: "/zones", label: "Delivery Zones", Icon: MapPin },
+    { href: "/settings", label: "Settings", Icon: Settings },
+  ] },
 ] as const;
 
 const iconCls = "h-5 w-5 shrink-0";

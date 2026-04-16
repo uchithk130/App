@@ -11,6 +11,7 @@ import { AuthPageHeading } from "@/components/auth/auth-page-heading";
 import { AuthTextField } from "@/components/auth/auth-text-field";
 import { AuthPrimaryButton } from "@/components/auth/auth-primary-button";
 import { API_BASE } from "@/lib/config";
+import { useGuestOnly } from "@/lib/use-guest-only";
 
 const schema = z.object({
   email: z.string().min(1, "Enter your email").email("Enter a valid email"),
@@ -19,6 +20,8 @@ const schema = z.object({
 type Form = z.infer<typeof schema>;
 
 export function ForgotPasswordContent() {
+const redirecting = useGuestOnly();
+if (redirecting) return null;
   const [done, setDone] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [devToken, setDevToken] = React.useState<string | null>(null);

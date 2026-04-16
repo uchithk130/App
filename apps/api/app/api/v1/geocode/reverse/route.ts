@@ -18,9 +18,20 @@ export async function GET(req: Request) {
     if (Number.isNaN(lat) || Number.isNaN(lng)) return errorJson("Invalid coordinates", 400);
 
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
-    const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "application/json" } });
-    if (!res.ok) return errorJson("Reverse geocode failed", 502);
-    const data = (await res.json()) as NominatimReverse;
+
+    let data: NominatimReverse;
+    try {
+      const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "application/json" } });
+      if (!res.ok) {
+        // Nominatim returned an error  return coords-only fallback
+        return json({ label: `${lat.toFixed(6)}, ${lng.toFixed(6)}`, line1: "", city: "", state: "", postcode: "", lat, lng });
+      }
+      data = (await res.json()) as NominatimReverse;
+    } catch {
+      // Network / TLS error  return coords-only fallback instead of 500
+      return json({ label: `${lat.toFixed(6)}, ${lng.toFixed(6)}`, line1: "", city: "", state: "", postcode: "", lat, lng });
+    }
+
     const a = data.address ?? {};
     const city = a.city || a.town || a.village || a.municipality || a.county || "";
     const state = a.state || "";

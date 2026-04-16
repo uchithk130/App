@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Gift, Loader2, Pencil, Plus } from "lucide-react";
+import { Gift, Loader2, Pencil, Plus, Search } from "lucide-react";
 import { Button, ToggleSwitch } from "@fitmeals/ui";
 import { api } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth-store";
+import { SearchableMultiSelect, type SelectOption } from "@/components/searchable-multi-select";
 
 type CouponRow = {
   id: string;
@@ -34,7 +35,7 @@ type CouponRow = {
 };
 
 type CustomerOpt = { id: string; fullName: string; email: string };
-type MealOpt = { id: string; name: string };
+type MealOpt = { id: string; name: string; category: string | null };
 
 function formatScope(all: boolean, count: number, label: string) {
   if (all) return `All ${label}`;
@@ -54,13 +55,13 @@ export function CouponsContent() {
 
   const customersQ = useQuery({
     queryKey: ["admin-customers-options"],
-    queryFn: () => api<{ items: CustomerOpt[] }>("/api/v1/admin/customers"),
+    queryFn: () => api<{ items: CustomerOpt[] }>("/api/v1/admin/customers?limit=50"),
     enabled: mounted && !!getAccessToken(),
   });
 
   const mealsQ = useQuery({
     queryKey: ["admin-meal-options"],
-    queryFn: () => api<{ items: MealOpt[] }>("/api/v1/admin/meal-options"),
+    queryFn: () => api<{ items: MealOpt[] }>("/api/v1/admin/meal-options?limit=50"),
     enabled: mounted && !!getAccessToken(),
   });
 
@@ -201,15 +202,15 @@ export function CouponsContent() {
   const meals = mealsQ.data?.items ?? [];
   const rows = couponsQ.data?.items ?? [];
 
-  function onCustomerSelect(e: React.ChangeEvent<HTMLSelectElement>) {
-    const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
-    setSelectedCustomerIds(selected);
-  }
+  const searchCustomers = React.useCallback(async (q: string): Promise<SelectOption[]> => {
+    const res = await api<{ items: CustomerOpt[] }>(`/api/v1/admin/customers?q=${encodeURIComponent(q)}&limit=20`);
+    return res.items.map((c) => ({ id: c.id, label: c.fullName, sub: c.email }));
+  }, []);
 
-  function onMealSelect(e: React.ChangeEvent<HTMLSelectElement>) {
-    const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
-    setSelectedMealIds(selected);
-  }
+  const searchMeals = React.useCallback(async (q: string): Promise<SelectOption[]> => {
+    const res = await api<{ items: MealOpt[] }>(`/api/v1/admin/meal-options?q=${encodeURIComponent(q)}&limit=20`);
+    return res.items.map((m) => ({ id: m.id, label: m.name, sub: m.category ?? null }));
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -399,17 +400,69 @@ export function CouponsContent() {
             />
           </div>
 
-          <div className="space-y-2 md:col-span-2">
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                <input type="checkbox" checked={freeShipping} onChange={(e) => setFreeShipping(e.target.checked)} />
-                Free shipping
-              </label>
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                <input type="checkbox" checked={firstOrderOnly} onChange={(e) => setFirstOrderOnly(e.target.checked)} />
-                First order only
-              </label>
+          {/* Targeting toggles */}
+          <div className="space-y-4 rounded-xl border border-slate-100 bg-slate-50/50 p-4 md:col-span-2 dark:border-zinc-800 dark:bg-zinc-900/30">
+            <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Targeting</h3>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-800 dark:text-zinc-100">Free shipping</p>
+                <p className="text-[11px] text-slate-400">Waive delivery fee for this coupon</p>
+              </div>
+              <ToggleSwitch checked={freeShipping} onChange={setFreeShipping} label="Free shipping" />
             </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-800 dark:text-zinc-100">First order only</p>
+                <p className="text-[11px] text-slate-400">Only new customers can use this</p>
+              </div>
+              <ToggleSwitch checked={firstOrderOnly} onChange={setFirstOrderOnly} label="First order only" />
+            </div>
+
+            <hr className="border-slate-200 dark:border-zinc-700" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-800 dark:text-zinc-100">All customers</p>
+                <p className="text-[11px] text-slate-400">{appliesToAllCustomers ? "Available to everyone" : "Restricted to selected customers"}</p>
+              </div>
+              <ToggleSwitch
+                checked={appliesToAllCustomers}
+                onChange={(v) => { setAppliesToAllCustomers(v); if (v) setSelectedCustomerIds([]); }}
+                label="All customers"
+              />
+            </div>
+            {!appliesToAllCustomers && (
+              <SearchableMultiSelect
+                selected={selectedCustomerIds}
+                onChange={setSelectedCustomerIds}
+                onSearch={searchCustomers}
+                placeholder="Search customers by name or email..."
+              />
+            )}
+
+            <hr className="border-slate-200 dark:border-zinc-700" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-800 dark:text-zinc-100">All menu items</p>
+                <p className="text-[11px] text-slate-400">{appliesToAllMeals ? "Applies to entire menu" : "Restricted to selected meals"}</p>
+              </div>
+              <ToggleSwitch
+                checked={appliesToAllMeals}
+                onChange={(v) => { setAppliesToAllMeals(v); if (v) setSelectedMealIds([]); }}
+                label="All menu items"
+              />
+            </div>
+            {!appliesToAllMeals && (
+              <SearchableMultiSelect
+                selected={selectedMealIds}
+                onChange={setSelectedMealIds}
+                onSearch={searchMeals}
+                placeholder="Search meals by name..."
+              />
+            )}
           </div>
 
           <div className="space-y-2 md:col-span-2">
@@ -418,73 +471,9 @@ export function CouponsContent() {
               value={termsAndConditions}
               onChange={(e) => setTermsAndConditions(e.target.value)}
               rows={3}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-admin-orange/25"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-admin-orange/25 dark:border-zinc-700 dark:bg-zinc-800"
               placeholder="Enter terms and conditions"
             />
-          </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
-              <input
-                type="checkbox"
-                checked={appliesToAllCustomers}
-                onChange={(e) => {
-                  setAppliesToAllCustomers(e.target.checked);
-                  if (e.target.checked) setSelectedCustomerIds([]);
-                }}
-              />
-              All customers
-            </label>
-            {!appliesToAllCustomers ? (
-              <div>
-                <p className="mb-1 text-xs text-slate-500">Hold Ctrl/Cmd to select multiple</p>
-                <select
-                  multiple
-                  size={6}
-                  value={selectedCustomerIds}
-                  onChange={onCustomerSelect}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-admin-orange/25"
-                >
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.fullName} ({c.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
-              <input
-                type="checkbox"
-                checked={appliesToAllMeals}
-                onChange={(e) => {
-                  setAppliesToAllMeals(e.target.checked);
-                  if (e.target.checked) setSelectedMealIds([]);
-                }}
-              />
-              All menu items
-            </label>
-            {!appliesToAllMeals ? (
-              <div>
-                <p className="mb-1 text-xs text-slate-500">Hold Ctrl/Cmd to select multiple</p>
-                <select
-                  multiple
-                  size={8}
-                  value={selectedMealIds}
-                  onChange={onMealSelect}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-admin-orange/25"
-                >
-                  {meals.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
           </div>
 
           <div className="md:col-span-2">

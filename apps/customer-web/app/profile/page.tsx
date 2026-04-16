@@ -262,6 +262,12 @@ export default function ProfilePage() {
   const handleLogout = async () => {
     setLoggingOut(true);
     clearTokens();
+    // Clear all cached data (addresses, cart, favorites, profile, etc.)
+    // to prevent leaking data to the next logged-in user
+    const { getQueryClient } = await import("@/app/providers");
+    getQueryClient()?.clear();
+    const { clearStoredLocation } = await import("@/lib/location-storage");
+    clearStoredLocation();
     await fetch(`${API_BASE}/api/v1/auth/logout`, { method: "POST", credentials: "include" }).catch(
       () => undefined
     );
@@ -299,7 +305,7 @@ export default function ProfilePage() {
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-6 pt-4 max-lg:kcal-safe-pb lg:px-6 lg:pb-10">
+          <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-28 pt-4 lg:px-6 lg:pb-10">
             {/* Profile card or Guest CTA */}
             {!mounted ? (
               <ProfileSkeleton />

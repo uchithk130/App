@@ -14,10 +14,17 @@ export async function POST(req: Request) {
     if (!raw) return errorJson("No session", 401);
     const tokenHash = hashRefreshToken(raw);
     const session = await prisma.session.findFirst({
-      where: { tokenHash, expiresAt: { gt: new Date() } },
+      where: { tokenHash, expiresAt: { gt: new Date() }, revokedAt: null },
       include: { user: { include: { roles: { include: { role: true } } } } },
     });
     if (!session?.user || session.user.deletedAt) return errorJson("Invalid session", 401);
+
+    // Update lastSeenAt (fire-and-forget to avoid slowing down refresh)
+    void prisma.session.update({
+      where: { id: session.id },
+      data: { lastSeenAt: new Date() },
+    }).catch(() => {});
+
     const roles = session.user.roles.map((r) => r.role.code);
     const scope = session.user.appScope;
     const accessToken = await signAccessToken({ sub: session.user.id, roles, scope });

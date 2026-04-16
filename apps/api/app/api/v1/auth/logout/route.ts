@@ -10,7 +10,10 @@ export async function POST() {
     const raw = await getRefreshCookie();
     if (raw) {
       const tokenHash = hashRefreshToken(raw);
-      await prisma.session.deleteMany({ where: { tokenHash } });
+      await prisma.session.updateMany({
+        where: { tokenHash, revokedAt: null },
+        data: { revokedAt: new Date(), revokeReason: "user_logout" },
+      });
     }
     await clearRefreshCookie();
     return json({ ok: true });

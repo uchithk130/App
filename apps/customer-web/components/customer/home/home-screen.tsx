@@ -56,7 +56,6 @@ function formatInr(n: string) {
 }
 
 export function HomeScreen() {
-const [loc, setLoc] = React.useState<StoredDeliveryLocation | null>(null);
 const [carousel, setCarousel] = React.useState(0);
 const feed = useQuery({ queryKey: ["home-feed"], queryFn: fetchHome });
 const authed = typeof window !== "undefined" && !!getAccessToken();
@@ -67,9 +66,50 @@ const cart = useQuery({
 });
 const cartCount = cart.data?.items.reduce((s, i) => s + i.quantity, 0) ?? 0;
 
-  React.useEffect(() => {
-    setLoc(readStoredLocation());
-  }, []);
+  // Fetch real addresses from API when logged in
+  type Addr = {
+    id: string;
+    line1: string;
+    line2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+    label: string | null;
+    lat: number | null;
+    lng: number | null;
+    isDefault: boolean;
+  };
+  const addressesQ = useQuery({
+    queryKey: ["customer-addresses"],
+    queryFn: () => api<{ items: Addr[] }>("/api/v1/customer/addresses"),
+    enabled: authed,
+  });
+
+  // Determine the display address:
+  // 1. Logged in with addresses -> use default or first address from API
+  // 2. Not logged in -> use localStorage (guest location)
+  // 3. No address at all -> null
+  const loc = React.useMemo<StoredDeliveryLocation | null>(() => {
+    if (authed && addressesQ.data?.items.length) {
+      const items = addressesQ.data.items;
+      const picked = items.find((a) => a.isDefault) ?? items[0];
+      if (picked) {
+        return {
+          id: picked.id,
+          label: picked.label ?? "Saved",
+          line1: picked.line1,
+          line2: picked.line2 ?? undefined,
+          city: picked.city,
+          state: picked.state,
+          pincode: picked.pincode,
+          lat: picked.lat ?? 0,
+          lng: picked.lng ?? 0,
+        };
+      }
+    }
+    // Guest or no backend addresses: fall back to localStorage
+    return readStoredLocation();
+  }, [authed, addressesQ.data]);
 
   const promos = feed.data?.promos ?? [];
   const categories = feed.data?.categories ?? [];
@@ -81,21 +121,44 @@ const cartCount = cart.data?.items.reduce((s, i) => s + i.quantity, 0) ?? 0;
     return () => window.clearInterval(t);
   }, [promos.length]);
 
-  const displayLine = loc
-    ? [loc.line1, loc.city].filter(Boolean).join(" · ")
-    : "Select your location";
+  const hasAddress = !!loc;
+  const addressLoading = authed && addressesQ.isLoading;
+
+  const headerLabel = hasAddress
+    ? loc.label
+    : authed
+      ? "Set delivery address"
+      : "Set your delivery location";
+
+  const headerSub = hasAddress
+    ? [loc.line1, loc.city].filter(Boolean).join(" \u00B7 ")
+    : authed
+      ? "Tap to add your first address"
+      : "Tap to choose where we deliver";
 
   return (
     <div className="pb-24 pt-3 lg:pb-12 lg:pt-6">
       {/* Header */}
       <header className="mb-4 flex items-start justify-between gap-3 px-4 lg:px-6">
         <Link href="/locations" className="min-w-0 flex-1 rounded-2xl py-1 transition hover:bg-white/60">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Deliver to</p>
-          <div className="mt-0.5 flex items-center gap-1">
-            <span className="truncate text-base font-bold text-slate-900">{loc?.label ?? "Select location"}</span>
-            <ChevronDown className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
-          </div>
-          <p className="truncate text-xs text-slate-500">{displayLine}</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+            {hasAddress ? "Deliver to" : "Location"}
+          </p>
+          {addressLoading ? (
+            <div className="mt-1 space-y-1.5">
+              <div className="h-5 w-32 animate-pulse rounded bg-slate-200" />
+              <div className="h-3 w-48 animate-pulse rounded bg-slate-100" />
+            </div>
+          ) : (
+            <>
+              <div className="mt-0.5 flex items-center gap-1">
+                {!hasAddress && <MapPin className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />}
+                <span className="truncate text-base font-bold text-slate-900">{headerLabel}</span>
+                <ChevronDown className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
+              </div>
+              <p className="truncate text-xs text-slate-500">{headerSub}</p>
+            </>
+          )}
         </Link>
         <Link
           href="/cart"
