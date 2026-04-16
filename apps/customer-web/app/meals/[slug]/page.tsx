@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@fitmeals/ui";
 import { api } from "@/lib/api";
+import { getAccessToken } from "@/lib/auth-store";
 import { KcalViewportShell } from "@/components/kcal/kcal-viewport-shell";
 import { MealHighlightBadges } from "@/components/kcal/meal-menu-badges";
 import {
@@ -59,13 +60,32 @@ export default function MealDetailPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const [qty, setQty] = React.useState(1);
-  const [isFav, setIsFav] = React.useState(false);
   const [selectedAddOns, setSelectedAddOns] = React.useState<Set<string>>(new Set());
+  const authed = typeof window !== "undefined" && !!getAccessToken();
 
   const q = useQuery({
     queryKey: ["meal", params.slug],
     queryFn: () => api<MealDetail>(`/api/v1/meals/${params.slug}`),
     enabled: !!params.slug,
+  });
+
+  type FavItem = { mealId: string };
+  const favsQ = useQuery({
+    queryKey: ["favorites"],
+    queryFn: () => api<{ items: FavItem[] }>("/api/v1/favorites"),
+    enabled: authed,
+  });
+  const isFav = !!q.data && (favsQ.data?.items ?? []).some((f) => f.mealId === q.data!.id);
+
+  const addFav = useMutation({
+    mutationFn: (mealId: string) =>
+      api("/api/v1/favorites", { method: "POST", body: JSON.stringify({ mealId }) }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["favorites"] }),
+  });
+  const removeFav = useMutation({
+    mutationFn: (mealId: string) =>
+      api(`/api/v1/favorites/${mealId}`, { method: "DELETE" }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["favorites"] }),
   });
 
   const addToCart = useMutation({
@@ -133,7 +153,10 @@ export default function MealDetailPage() {
                   images={q.data.images}
                   alt={q.data.name}
                   isFavorite={isFav}
-                  onToggleFavorite={() => setIsFav((f) => !f)}
+                  onToggleFavorite={() => {
+                    if (!authed || !q.data) return;
+                    isFav ? removeFav.mutate(q.data.id) : addFav.mutate(q.data.id);
+                  }}
                   backHref="/menu"
                 />
               </div>

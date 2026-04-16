@@ -10,6 +10,7 @@ import {
   Search,
   X,
   Flame,
+  Heart,
   Plus,
   Minus,
   Star,
@@ -74,6 +75,8 @@ function MealCardItem({
   onUpdate,
   onRemove,
   busy,
+  isFav,
+  onToggleFav,
 }: {
   meal: MealCard;
   cartQty: number;
@@ -81,6 +84,8 @@ function MealCardItem({
   onUpdate: (qty: number) => void;
   onRemove: () => void;
   busy: boolean;
+  isFav: boolean;
+  onToggleFav: () => void;
 }) {
   const hasDiscount =
     meal.compareAtPrice && Number(meal.compareAtPrice) > Number(meal.basePrice);
@@ -92,7 +97,7 @@ function MealCardItem({
     <div className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 transition hover:shadow-md">
       {/* Image  fixed aspect ratio */}
       <Link href={`/meals/${meal.slug}`} className="relative block w-full">
-        <div className="aspect-[4/3] w-full overflow-hidden bg-slate-50">
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-50">
           {meal.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -106,27 +111,42 @@ function MealCardItem({
               <UtensilsCrossed className="h-8 w-8 text-slate-200" />
             </div>
           )}
-        </div>
 
-        {/* Badges */}
-        <div className="absolute left-2 top-2 flex flex-col gap-1">
-          {meal.richInProtein && (
-            <span className="rounded-full bg-emerald-600/90 px-2 py-0.5 text-[9px] font-bold text-white backdrop-blur-sm">
-              High Protein
-            </span>
-          )}
-          {meal.richInLowCarb && (
-            <span className="rounded-full bg-sky-600/90 px-2 py-0.5 text-[9px] font-bold text-white backdrop-blur-sm">
-              Low Carb
-            </span>
-          )}
-        </div>
+          {/* Badges  inside overflow-hidden container so they stay within card bounds */}
+          <div className="absolute left-2 top-2 z-10 flex flex-col gap-1">
+            {meal.richInProtein && (
+              <span className="rounded-full bg-emerald-600/90 px-2 py-0.5 text-[9px] font-bold text-white backdrop-blur-sm">
+                High Protein
+              </span>
+            )}
+            {meal.richInLowCarb && (
+              <span className="rounded-full bg-sky-600/90 px-2 py-0.5 text-[9px] font-bold text-white backdrop-blur-sm">
+                Low Carb
+              </span>
+            )}
+          </div>
 
-        {discountPct > 0 && (
-          <span className="absolute right-2 top-2 rounded-full bg-rose-500/90 px-2 py-0.5 text-[9px] font-bold text-white backdrop-blur-sm">
-            {discountPct}% OFF
-          </span>
-        )}
+          {/* Heart + Discount at top-right */}
+          <div className="absolute right-2 top-2 z-10 flex flex-col items-end gap-1">
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFav(); }}
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-white/80 shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-90"
+              aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+            >
+              <Heart
+                className={`h-3.5 w-3.5 transition-colors ${
+                  isFav ? "fill-rose-500 text-rose-500" : "text-slate-400"
+                }`}
+              />
+            </button>
+            {discountPct > 0 && (
+              <span className="rounded-full bg-rose-500/90 px-2 py-0.5 text-[9px] font-bold text-white backdrop-blur-sm">
+                {discountPct}% OFF
+              </span>
+            )}
+          </div>
+        </div>
       </Link>
 
       {/* Content  fixed height structure */}
@@ -243,7 +263,7 @@ function CategoryRail({
   onSelect: (slug: string) => void;
 }) {
   return (
-    <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none">
+    <div className="flex gap-2 overflow-x-auto px-4 py-3 scrollbar-none">
       {/* "All" is a frontend convenience  not a fake admin category */}
       <button
         type="button"
@@ -364,6 +384,29 @@ function MenuPageContent() {
   const cartBusy =
     addToCart.isPending || updateQty.isPending || removeItem.isPending;
 
+  /* Favorites */
+  type FavItem = { mealId: string };
+  const favsQ = useQuery({
+    queryKey: ["favorites"],
+    queryFn: () => api<{ items: FavItem[] }>("/api/v1/favorites"),
+    enabled: authed,
+  });
+  const favSet = React.useMemo(() => {
+    const s = new Set<string>();
+    for (const f of favsQ.data?.items ?? []) s.add(f.mealId);
+    return s;
+  }, [favsQ.data]);
+  const addFav = useMutation({
+    mutationFn: (mealId: string) =>
+      api("/api/v1/favorites", { method: "POST", body: JSON.stringify({ mealId }) }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["favorites"] }),
+  });
+  const removeFav = useMutation({
+    mutationFn: (mealId: string) =>
+      api(`/api/v1/favorites/${mealId}`, { method: "DELETE" }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["favorites"] }),
+  });
+
   /* Debounced search */
   React.useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -406,7 +449,7 @@ function MenuPageContent() {
       <KcalAppLayout>
         <div className="relative z-10 flex min-h-dvh flex-col bg-[#f7f8f7]">
           {/* ?? Header ?? */}
-          <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md">
+          <header className="sticky top-0 z-30 bg-white/95 shadow-sm backdrop-blur-md">
             <div className="flex items-center gap-2 px-4 py-3">
               <Link
                 href="/"
@@ -480,7 +523,7 @@ function MenuPageContent() {
           </header>
 
           {/* ?? Meal Grid ?? */}
-          <main className="mx-auto w-full max-w-2xl flex-1 px-3 pb-6 pt-4 max-lg:kcal-safe-pb lg:max-w-6xl lg:px-6">
+          <main className="mx-auto w-full max-w-2xl flex-1 px-3 pb-6 pt-5 max-lg:kcal-safe-pb lg:max-w-6xl lg:px-6 lg:pt-6">
             {mealsQ.isLoading ? (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -516,6 +559,11 @@ function MenuPageContent() {
                       }
                       onRemove={() => ci && removeItem.mutate(ci.id)}
                       busy={cartBusy}
+                      isFav={favSet.has(m.id)}
+                      onToggleFav={() => {
+                        if (!authed) return;
+                        favSet.has(m.id) ? removeFav.mutate(m.id) : addFav.mutate(m.id);
+                      }}
                     />
                   );
                 })}
