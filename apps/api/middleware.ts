@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 function allowedOrigins() {
-  return [
+  const explicit = [
     process.env.NEXT_PUBLIC_APP_URL,
     process.env.NEXT_PUBLIC_ADMIN_URL,
     process.env.NEXT_PUBLIC_RIDER_URL,
+    process.env.CORS_ORIGIN_CUSTOMER,
+    process.env.CORS_ORIGIN_ADMIN,
+    process.env.CORS_ORIGIN_RIDER,
     "http://localhost:3000",
     "http://localhost:3001",
     "http://localhost:3002",
@@ -13,6 +16,17 @@ function allowedOrigins() {
     "http://127.0.0.1:3001",
     "http://127.0.0.1:3002",
   ].filter((x): x is string => Boolean(x));
+
+  // Also allow any extra comma-separated origins from env
+  const extra = process.env.CORS_ALLOWED_ORIGINS;
+  if (extra) {
+    for (const o of extra.split(",")) {
+      const trimmed = o.trim();
+      if (trimmed) explicit.push(trimmed);
+    }
+  }
+
+  return explicit;
 }
 
 export function middleware(req: NextRequest) {

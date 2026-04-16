@@ -35,8 +35,12 @@ export function customerMealImageUrl(req: Request, stored: string | null | undef
   // This ensures private-bucket S3 URLs get proxied instead of returning 403.
   const key = extractMealStorageKey(t);
   if (key) {
-    const origin = new URL(req.url).origin;
-    return `${origin}/api/v1/public/meal-images?key=${encodeURIComponent(key)}`;
+    // Use the public API URL so image proxy works on production
+    // (req.url.origin may be an internal host like localhost on Render/Railway)
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL
+      || process.env.NEXT_PUBLIC_APP_URL
+      || new URL(req.url).origin;
+    return `${apiBase.replace(/\/+$/, "")}/api/v1/public/meal-images?key=${encodeURIComponent(key)}`;
   }
 
   // Non-S3 https URL (e.g. Unsplash mock, external CDN) — use directly
