@@ -1,22 +1,26 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken } from "@/lib/auth-store";
 
 /**
- * Redirects authenticated riders away from guest-only pages (login, register, etc.).
- * Returns true while redirecting (caller should render nothing).
+ * Redirects authenticated riders away from guest-only pages.
+ * Returns true while checking/redirecting (caller should render nothing).
  */
 export function useGuestOnly(redirectTo = "/"): boolean {
   const router = useRouter();
-  const token = typeof window !== "undefined" ? getAccessToken() : null;
+  const [checked, setChecked] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
   useEffect(() => {
     if (getAccessToken()) {
+      setShouldRedirect(true);
       router.replace(redirectTo);
     }
+    setChecked(true);
   }, [router, redirectTo]);
 
-  return !!token;
+  if (!checked) return true;
+  return shouldRedirect;
 }

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronLeft, Shield, Lock, Smartphone, Monitor, Tablet,
-  LogOut, Eye, EyeOff, Loader2, Check,
+  LogOut, Eye, EyeOff, Loader2, Check, AlertTriangle,
 } from "lucide-react";
 import { ToggleSwitch } from "@fitmeals/ui";
 import { api } from "@/lib/api";
@@ -40,6 +40,49 @@ function timeAgo(iso: string) {
   return days + "d ago";
 }
 
+function ConfirmModal({ open, title, message, confirmLabel, onConfirm, onCancel, loading }: {
+  open: boolean;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading?: boolean;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-6">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex h-14 w-14 mx-auto items-center justify-center rounded-full bg-rose-50">
+          <AlertTriangle className="h-6 w-6 text-rose-500" />
+        </div>
+        <h3 className="mb-2 text-center text-lg font-bold text-slate-900">{title}</h3>
+        <p className="mb-6 text-center text-sm text-slate-500">{message}</p>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-rose-500 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-rose-600 disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {confirmLabel ?? "Confirm"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SecurityPage() {
   const router = useRouter();
   const qc = useQueryClient();
@@ -51,6 +94,7 @@ export default function SecurityPage() {
     if (mounted && !getAccessToken()) router.replace("/login");
   }, [mounted, router]);
 
+  // Change password state
   const [pwOpen, setPwOpen] = React.useState(false);
   const [currentPw, setCurrentPw] = React.useState("");
   const [newPw, setNewPw] = React.useState("");
@@ -60,6 +104,25 @@ export default function SecurityPage() {
   const [logoutOthers, setLogoutOthers] = React.useState(true);
   const [pwErr, setPwErr] = React.useState<string | null>(null);
   const [pwSuccess, setPwSuccess] = React.useState(false);
+
+  // Confirm modal state
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [confirmTitle, setConfirmTitle] = React.useState("");
+  const [confirmMsg, setConfirmMsg] = React.useState("");
+  const [confirmAction, setConfirmAction] = React.useState<(() => void) | null>(null);
+  const [confirmLoading, setConfirmLoading] = React.useState(false);
+
+  function openConfirm(title: string, msg: string, action: () => void) {
+    setConfirmTitle(title);
+    setConfirmMsg(msg);
+    setConfirmAction(() => action);
+    setConfirmOpen(true);
+  }
+  function closeConfirm() {
+    setConfirmOpen(false);
+    setConfirmAction(null);
+    setConfirmLoading(false);
+  }
 
   const changePw = useMutation({
     mutationFn: () => {
@@ -79,6 +142,7 @@ export default function SecurityPage() {
     onError: (e) => setPwErr((e as Error).message),
   });
 
+  // Sessions
   const sessionsQ = useQuery({
     queryKey: ["sessions"],
     queryFn: () => api<{ items: Session[] }>("/api/v1/auth/sessions"),
@@ -87,12 +151,14 @@ export default function SecurityPage() {
 
   const revokeSession = useMutation({
     mutationFn: (id: string) => api(`/api/v1/auth/sessions/${id}`, { method: "DELETE" }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["sessions"] }),
+    onSuccess: () => { closeConfirm(); void qc.invalidateQueries({ queryKey: ["sessions"] }); },
+    onError: () => closeConfirm(),
   });
 
   const revokeOthers = useMutation({
     mutationFn: () => api("/api/v1/auth/sessions/others", { method: "DELETE" }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["sessions"] }),
+    onSuccess: () => { closeConfirm(); void qc.invalidateQueries({ queryKey: ["sessions"] }); },
+    onError: () => closeConfirm(),
   });
 
   const sessions = sessionsQ.data?.items ?? [];
@@ -169,7 +235,16 @@ export default function SecurityPage() {
                   </div>
                 </div>
                 {otherSessions.length > 0 && (
-                  <button type="button" onClick={() => { if (confirm("Log out all other sessions?")) revokeOthers.mutate(); }} disabled={revokeOthers.isPending} className="rounded-full bg-rose-50 px-3 py-1.5 text-[11px] font-bold text-rose-600 transition hover:bg-rose-100 disabled:opacity-50">
+                  <button
+                    type="button"
+                    onClick={() => openConfirm(
+                      "Log out all others",
+                      "All other sessions will be signed out. Only this device will stay logged in.",
+                      () => revokeOthers.mutate(),
+                    )}
+                    disabled={revokeOthers.isPending}
+                    className="rounded-full bg-rose-50 px-3 py-1.5 text-[11px] font-bold text-rose-600 transition hover:bg-rose-100 disabled:opacity-50"
+                  >
                     Log out all others
                   </button>
                 )}
@@ -204,7 +279,20 @@ export default function SecurityPage() {
                         <p className="text-sm font-semibold text-slate-900">{s.browser} on {s.os}</p>
                         <p className="text-[11px] text-slate-500">Last active {timeAgo(s.lastSeenAt)}{s.ip ? ` \u00B7 ${s.ip}` : ""}</p>
                       </div>
-                      <button type="button" onClick={() => { if (confirm("Log out this session?")) revokeSession.mutate(s.id); }} disabled={revokeSession.isPending} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-rose-400 transition hover:bg-rose-50 disabled:opacity-40" aria-label="Revoke session">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sid = s.id;
+                          openConfirm(
+                            "Log out session",
+                            `Sign out from ${s.browser} on ${s.os}? That device will need to log in again.`,
+                            () => revokeSession.mutate(sid),
+                          );
+                        }}
+                        disabled={revokeSession.isPending}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-rose-400 transition hover:bg-rose-50 disabled:opacity-40"
+                        aria-label="Revoke session"
+                      >
                         <LogOut className="h-4 w-4" />
                       </button>
                     </div>
@@ -214,6 +302,17 @@ export default function SecurityPage() {
             </section>
           </main>
         </div>
+
+        {/* Confirm Modal */}
+        <ConfirmModal
+          open={confirmOpen}
+          title={confirmTitle}
+          message={confirmMsg}
+          confirmLabel="Log out"
+          onConfirm={() => { setConfirmLoading(true); confirmAction?.(); }}
+          onCancel={closeConfirm}
+          loading={confirmLoading}
+        />
     </>
   );
 }
