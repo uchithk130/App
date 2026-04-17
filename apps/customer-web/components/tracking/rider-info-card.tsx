@@ -5,7 +5,7 @@ import { Phone, MessageCircle, User } from "lucide-react";
 type Props = {
   name: string;
   orderId: string;
-  /** Show call/message actions — should be true only during active delivery */
+  /** Show call/message actions -- should be true only during active delivery */
   showActions?: boolean;
 };
 
@@ -26,10 +26,10 @@ export function RiderInfoCard({ name, orderId, showActions = true }: Props) {
 
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold text-slate-900">{name}</p>
-        <p className="text-xs text-slate-500">Delivery partner \u00B7 #{orderId.slice(0, 8)}</p>
+        <p className="text-xs text-slate-500">Delivery partner #{orderId.slice(0, 8)}</p>
       </div>
 
-      {/* Contact actions — only during active delivery */}
+      {/* Contact actions -- only during active delivery */}
       {showActions && (
         <div className="flex gap-2">
           <button
@@ -51,3 +51,4 @@ export function RiderInfoCard({ name, orderId, showActions = true }: Props) {
     </div>
   );
 }
+
