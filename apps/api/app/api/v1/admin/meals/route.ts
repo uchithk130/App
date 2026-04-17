@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MealListingStatus, MealType, PromoTagType } from "@prisma/client";
+import { Prisma, MealListingStatus, MealType, PromoTagType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { errorJson, json } from "@/lib/http";
 import { requireAdmin, AuthError } from "@/lib/auth/admin";
@@ -118,7 +118,7 @@ export async function POST(req: Request) {
           isSpecialOffer: body.isSpecialOffer ?? false,
           specialOfferPriority: body.specialOfferPriority ?? 0,
           promoTagType: body.promoTagType ?? null,
-          promoTagConfig: body.promoTagConfig ?? undefined,
+          promoTagConfig: body.promoTagConfig != null ? (body.promoTagConfig as Prisma.InputJsonValue) : undefined,
           promoTagText: body.promoTagText ?? null,
           nutrition: {
             create: {

@@ -124,7 +124,7 @@ export async function PATCH(req: Request, ctx: Params) {
         ...(body.isSpecialOffer !== undefined ? { isSpecialOffer: body.isSpecialOffer } : {}),
         ...(body.specialOfferPriority !== undefined ? { specialOfferPriority: body.specialOfferPriority } : {}),
         ...(body.promoTagType !== undefined ? { promoTagType: body.promoTagType } : {}),
-        ...(body.promoTagConfig !== undefined ? { promoTagConfig: body.promoTagConfig ?? Prisma.JsonNull } : {}),
+        ...(body.promoTagConfig !== undefined ? { promoTagConfig: body.promoTagConfig != null ? (body.promoTagConfig as Prisma.InputJsonValue) : Prisma.JsonNull } : {}),
         ...(body.promoTagText !== undefined ? { promoTagText: body.promoTagText } : {}),
       };
       if (listingStatus !== undefined) {

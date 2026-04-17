@@ -149,7 +149,7 @@ React.useEffect(() => {
 
           {order && (
             <>
-              {/* Map — only during active delivery */}
+              {/* Map -- only during active delivery */}
               <div className="lg:sticky lg:top-20 lg:self-start">
                 {!isTerminal ? (
                   <>
@@ -160,7 +160,7 @@ React.useEffect(() => {
                       </div>
                       <div>
                         <p className="text-xs text-slate-500">Estimated delivery</p>
-                        <p className="text-sm font-bold text-slate-900">25 \u2013 35 min</p>
+                        <p className="text-sm font-bold text-slate-900">25 - 35 min</p>
                       </div>
                     </div>
                   </>
@@ -179,7 +179,7 @@ React.useEffect(() => {
 
               {/* Info column (right on desktop) */}
               <div className="space-y-4">
-                {/* Rider — only during active delivery, hidden after completion for privacy */}
+                {/* Rider -- only during active delivery, hidden after completion for privacy */}
                 {!isTerminal && (
                   order.assignment ? (
                     <RiderInfoCard
@@ -232,7 +232,7 @@ React.useEffect(() => {
                     {Number(order.discount) > 0 && (
                       <div className="flex justify-between text-sm text-emerald-600">
                         <span>Discount</span>
-                        <span>?{formatInr(order.discount)}</span>
+                        <span>-{formatInr(order.discount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-base font-bold text-slate-900">
