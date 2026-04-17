@@ -1,5 +1,3 @@
-"use client";
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth-store";
@@ -15,34 +13,30 @@ type Notification = {
 };
 
 type NotifResponse = { items: Notification[]; unreadCount: number };
-type CountResponse = { count: number };
 
-/**
- * Fetch full notification list. Refetches every 30s.
- */
+/** Single source of truth for notifications. Polls every 15s, pauses in background. */
 export function useNotifications(enabled = true) {
   const authed = typeof window !== "undefined" && !!getAccessToken();
   return useQuery({
     queryKey: ["notifications"],
     queryFn: () => api<NotifResponse>("/api/v1/notifications?limit=30"),
     enabled: enabled && authed,
-    refetchInterval: 5_000,
-    staleTime: 3_000,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+    staleTime: 10_000,
   });
 }
 
-/**
- * Lightweight unread count. Polls every 30s. Use for badge only.
- */
+/** Derive unread count from the main notifications query -- no extra API call. */
 export function useUnreadCount() {
-  const authed = typeof window !== "undefined" && !!getAccessToken();
-  return useQuery({
-    queryKey: ["notifications-unread-count"],
-    queryFn: () => api<CountResponse>("/api/v1/notifications/unread-count"),
-    enabled: authed,
-    refetchInterval: 5_000,
-    staleTime: 3_000,
+  const { data } = useQuery<NotifResponse>({
+    queryKey: ["notifications"],
+    queryFn: () => api<NotifResponse>("/api/v1/notifications?limit=30"),
+    enabled: false,
+    staleTime: Infinity,
   });
+  return data?.unreadCount ?? 0;
 }
 
 export function useMarkRead() {
@@ -50,9 +44,20 @@ export function useMarkRead() {
   return useMutation({
     mutationFn: (id: string) =>
       api(`/api/v1/notifications/${id}`, { method: "PATCH" }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["notifications"] });
-      void qc.invalidateQueries({ queryKey: ["notifications-unread-count"] });
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["notifications"] });
+      const prev = qc.getQueryData<NotifResponse>(["notifications"]);
+      if (prev) {
+        qc.setQueryData<NotifResponse>(["notifications"], {
+          ...prev,
+          items: prev.items.map((n) => n.id === id ? { ...n, readAt: new Date().toISOString() } : n),
+          unreadCount: Math.max(0, prev.unreadCount - 1),
+        });
+      }
+      return { prev };
+    },
+    onError: (_e, _id, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["notifications"], ctx.prev);
     },
   });
 }
@@ -62,9 +67,22 @@ export function useMarkAllRead() {
   return useMutation({
     mutationFn: () =>
       api("/api/v1/notifications/read-all", { method: "POST" }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["notifications"] });
-      void qc.invalidateQueries({ queryKey: ["notifications-unread-count"] });
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["notifications"] });
+      const prev = qc.getQueryData<NotifResponse>(["notifications"]);
+      if (prev) {
+        const now = new Date().toISOString();
+        qc.setQueryData<NotifResponse>(["notifications"], {
+          ...prev,
+          items: prev.items.map((n) => ({ ...n, readAt: n.readAt ?? now })),
+          unreadCount: 0,
+        });
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["notifications"], ctx.prev);
     },
   });
 }
+

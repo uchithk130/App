@@ -49,16 +49,17 @@ async function fetchHome(): Promise<HomeFeed> {
   return res.json() as Promise<HomeFeed>;
 }
 
+const inrFmt = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 function formatInr(n: string) {
   const v = Number.parseFloat(n);
   if (Number.isNaN(v)) return n;
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(v);
+  return inrFmt.format(v);
 }
 
 export function HomeScreen() {
 const [mounted, setMounted] = React.useState(false);
 const [carousel, setCarousel] = React.useState(0);
-const feed = useQuery({ queryKey: ["home-feed"], queryFn: fetchHome });
+const feed = useQuery({ queryKey: ["home-feed"], queryFn: fetchHome, staleTime: 60_000, refetchOnWindowFocus: false });
 
 React.useEffect(() => { setMounted(true); }, []);
 

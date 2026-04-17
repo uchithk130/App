@@ -63,12 +63,40 @@ export default function BasketPage() {
   const updateQty = useMutation({
     mutationFn: ({ id, quantity }: { id: string; quantity: number }) =>
       api(`/api/v1/cart/items/${id}`, { method: "PATCH", body: JSON.stringify({ quantity }) }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["cart"] }),
+    onMutate: async ({ id, quantity }) => {
+      await qc.cancelQueries({ queryKey: ["cart"] });
+      const prev = qc.getQueryData<Cart>(["cart"]);
+      if (prev) {
+        qc.setQueryData<Cart>(["cart"], {
+          ...prev,
+          items: prev.items.map((i) => (i.id === id ? { ...i, quantity } : i)),
+        });
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["cart"], ctx.prev);
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["cart"] }),
   });
 
   const removeItem = useMutation({
     mutationFn: (id: string) => api(`/api/v1/cart/items/${id}`, { method: "DELETE" }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["cart"] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["cart"] });
+      const prev = qc.getQueryData<Cart>(["cart"]);
+      if (prev) {
+        qc.setQueryData<Cart>(["cart"], {
+          ...prev,
+          items: prev.items.filter((i) => i.id !== id),
+        });
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["cart"], ctx.prev);
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["cart"] }),
   });
 
   const placeOrder = useMutation({

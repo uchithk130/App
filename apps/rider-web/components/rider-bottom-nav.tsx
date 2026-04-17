@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, ClipboardList, Bell, Wallet, User } from "lucide-react";
-import { useUnreadCount } from "@/lib/use-notifications";
+import { useUnreadCount, useNotifications } from "@/lib/use-notifications";
 
 const tabs = [
   { href: "/", icon: Home, label: "Home", match: (p: string) => p === "/" },
@@ -15,8 +15,8 @@ const tabs = [
 
 export function RiderBottomNav() {
 const pathname = usePathname();
-const unread = useUnreadCount();
-const unreadCount = unread.data?.count ?? 0;
+useNotifications(); // start polling
+const unreadCount = useUnreadCount();
 
   return (
     <nav

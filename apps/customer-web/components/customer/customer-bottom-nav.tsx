@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { kcalMainNavItems } from "@/components/kcal/kcal-nav-config";
-import { useUnreadCount } from "@/lib/use-notifications";
+import { useUnreadCount, useNotifications } from "@/lib/use-notifications";
 
 export function CustomerBottomNav() {
 const pathname = usePathname();
-const unread = useUnreadCount();
-const unreadCount = unread.data?.count ?? 0;
+useNotifications(); // start polling
+const unreadCount = useUnreadCount();
 
   return (
     <nav

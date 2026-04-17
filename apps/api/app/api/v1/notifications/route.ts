@@ -21,27 +21,28 @@ export async function GET(req: Request) {
     const limit = Math.min(Number(url.searchParams.get("limit")) || 30, 100);
     const unreadOnly = url.searchParams.get("unread") === "1";
 
-    const items = await prisma.notification.findMany({
-      where: {
-        userId,
-        ...(unreadOnly ? { readAt: null } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      select: {
-        id: true,
-        type: true,
-        title: true,
-        body: true,
-        data: true,
-        readAt: true,
-        createdAt: true,
-      },
-    });
-
-    const unreadCount = await prisma.notification.count({
-      where: { userId, readAt: null },
-    });
+    const [items, unreadCount] = await Promise.all([
+      prisma.notification.findMany({
+        where: {
+          userId,
+          ...(unreadOnly ? { readAt: null } : {}),
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        select: {
+          id: true,
+          type: true,
+          title: true,
+          body: true,
+          data: true,
+          readAt: true,
+          createdAt: true,
+        },
+      }),
+      prisma.notification.count({
+        where: { userId, readAt: null },
+      }),
+    ]);
 
     return json({
       items: items.map((n) => ({

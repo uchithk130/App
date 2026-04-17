@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -37,22 +35,35 @@ type OrderRow = {
 };
 
 function useRiderLocationPush(hasActiveOrders: boolean) {
-  React.useEffect(() => {
-    if (!hasActiveOrders || !("geolocation" in navigator)) return;
+React.useEffect(() => {
+  if (!hasActiveOrders || !("geolocation" in navigator)) return;
 
-    let watchId: number | null = null;
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-    let lastLat: number | null = null;
-    let lastLng: number | null = null;
+  let watchId: number | null = null;
+  let intervalId: ReturnType<typeof setInterval> | null = null;
+  let lastLat: number | null = null;
+  let lastLng: number | null = null;
+  let sentLat: number | null = null;
+  let sentLng: number | null = null;
 
-    function pushToServer() {
-      if (lastLat == null || lastLng == null || !getAccessToken()) return;
-      void fetch(`${API_BASE}/api/v1/rider/location`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAccessToken()}` },
-        body: JSON.stringify({ lat: lastLat, lng: lastLng }),
-      }).catch(() => {});
-    }
+  function hasMoved() {
+    if (sentLat == null || sentLng == null || lastLat == null || lastLng == null) return true;
+    const dLat = lastLat - sentLat;
+    const dLng = lastLng - sentLng;
+    // ~50m threshold (rough degree approximation)
+    return dLat * dLat + dLng * dLng > 0.0000002;
+  }
+
+  function pushToServer() {
+    if (lastLat == null || lastLng == null || !getAccessToken()) return;
+    if (!hasMoved()) return;
+    sentLat = lastLat;
+    sentLng = lastLng;
+    void fetch(`${API_BASE}/api/v1/rider/location`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAccessToken()}` },
+      body: JSON.stringify({ lat: lastLat, lng: lastLng }),
+    }).catch(() => {});
+  }
 
     // watchPosition asks for permission once, then silently streams updates
     watchId = navigator.geolocation.watchPosition(

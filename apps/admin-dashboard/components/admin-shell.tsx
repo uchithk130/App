@@ -134,7 +134,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => setMounted(true), []);
 
-  const notifCount = useUnreadCount();
+  const notifCountVal = useUnreadCount();
   const adminNotifs = useAdminNotifications();
   const notifItems = (adminNotifs.data?.items ?? []).slice(0, 5).map((n) => ({
     id: n.id,
@@ -314,7 +314,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-1 sm:gap-2">
             <AdminHeaderIconMenu
               icon={Bell}
-              count={notifCount.data?.count ?? 0}
+              count={notifCountVal}
               menuTitle="Notifications"
               items={notifItems}
               viewAllHref="/notifications"

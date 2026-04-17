@@ -15,7 +15,15 @@ export function getQueryClient(): QueryClient | null {
 export function Providers({ children }: { children: React.ReactNode }) {
   const clientRef = useRef<QueryClient | null>(null);
   if (!clientRef.current) {
-    clientRef.current = new QueryClient();
+    clientRef.current = new QueryClient({
+      defaultOptions: {
+        queries: {
+          staleTime: 10_000,
+          refetchOnWindowFocus: false,
+          retry: 1,
+        },
+      },
+    });
     _qc = clientRef.current;
   }
 
