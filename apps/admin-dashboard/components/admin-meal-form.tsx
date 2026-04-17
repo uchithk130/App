@@ -19,6 +19,7 @@ const schema = z.object({
   categoryId: z.string().min(1),
   mealType: z.enum(["BREAKFAST", "LUNCH", "DINNER", "SNACK", "PRE_WORKOUT", "POST_WORKOUT"]),
   basePrice: z.string(),
+  compareAtPrice: z.string(),
   calories: z.coerce.number(),
   proteinG: z.string(),
   carbG: z.string(),
@@ -28,6 +29,10 @@ const schema = z.object({
   richInProtein: z.boolean(),
   richInFiber: z.boolean(),
   richInLowCarb: z.boolean(),
+  isSpecialOffer: z.boolean(),
+  specialOfferPriority: z.coerce.number().int(),
+  promoTagType: z.string(),
+  promoTagText: z.string(),
 });
 
 export type AdminMealFormProps = {
@@ -43,10 +48,17 @@ type MealDetail = {
   mealType: string;
   description: string | null;
   basePrice: string;
+  compareAtPrice: string | null;
   listingStatus: "ACTIVE" | "PAUSED" | "INACTIVE";
   richInProtein: boolean;
   richInFiber: boolean;
   richInLowCarb: boolean;
+  isSpecialOffer: boolean;
+  specialOfferPriority: number;
+  promoTagType: string | null;
+  promoTagConfig: Record<string, unknown> | null;
+  promoTagText: string | null;
+  promoLabel: string | null;
   coverUrl: string | null;
   nutrition: {
     calories: number;
@@ -58,48 +70,58 @@ type MealDetail = {
 };
 
 export function AdminMealForm({ mode, mealId }: AdminMealFormProps) {
-  const router = useRouter();
-  const qc = useQueryClient();
-  const [desc, setDesc] = React.useState("");
-  const [imageUrl, setImageUrl] = React.useState("");
-  const [contentVersion, setContentVersion] = React.useState(0);
-  const [err, setErr] = React.useState<string | null>(null);
+const router = useRouter();
+const qc = useQueryClient();
+const [desc, setDesc] = React.useState("");
+const [imageUrl, setImageUrl] = React.useState("");
+const [contentVersion, setContentVersion] = React.useState(0);
+const [err, setErr] = React.useState<string | null>(null);
+const [promoConfig, setPromoConfig] = React.useState<Record<string, string>>({});
+const [ready, setReady] = React.useState(false);
 
-  const form = useForm<z.infer<typeof schema>>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      mealType: "LUNCH",
-      basePrice: "349",
-      calories: 500,
-      proteinG: "40",
-      carbG: "45",
-      fatG: "12",
-      fiberG: "8",
-      listingStatus: "ACTIVE",
-      richInProtein: false,
-      richInFiber: false,
-      richInLowCarb: false,
-      name: "",
-      slug: "",
-      categoryId: "",
-    },
-  });
+const form = useForm<z.infer<typeof schema>>({
+  resolver: zodResolver(schema),
+  defaultValues: {
+    mealType: "LUNCH",
+    basePrice: "349",
+    compareAtPrice: "",
+    calories: 500,
+    proteinG: "40",
+    carbG: "45",
+    fatG: "12",
+    fiberG: "8",
+    listingStatus: "ACTIVE",
+    richInProtein: false,
+    richInFiber: false,
+    richInLowCarb: false,
+    isSpecialOffer: false,
+    specialOfferPriority: 0,
+    promoTagType: "",
+    promoTagText: "",
+    name: "",
+    slug: "",
+    categoryId: "",
+  },
+});
 
-  React.useEffect(() => {
-    if (!getAccessToken()) router.replace("/login");
-  }, [router]);
+React.useEffect(() => {
+  if (!getAccessToken()) router.replace("/login");
+  setReady(true);
+}, [router]);
 
-  const categories = useQuery({
-    queryKey: ["admin-meal-categories"],
-    queryFn: () => api<{ items: { id: string; name: string }[] }>("/api/v1/admin/meal-categories"),
-    enabled: !!getAccessToken(),
-  });
+const authed = ready && !!getAccessToken();
 
-  const meal = useQuery({
-    queryKey: ["admin-meal", mealId],
-    queryFn: () => api<MealDetail>(`/api/v1/admin/meals/${mealId}`),
-    enabled: mode === "edit" && !!mealId && !!getAccessToken(),
-  });
+const categories = useQuery({
+  queryKey: ["admin-meal-categories"],
+  queryFn: () => api<{ items: { id: string; name: string }[] }>("/api/v1/admin/meal-categories"),
+  enabled: authed,
+});
+
+const meal = useQuery({
+  queryKey: ["admin-meal", mealId],
+  queryFn: () => api<MealDetail>(`/api/v1/admin/meals/${mealId}`),
+  enabled: mode === "edit" && !!mealId && authed,
+});
 
   const hydratedRef = React.useRef<string | null>(null);
   React.useEffect(() => {
@@ -118,6 +140,7 @@ export function AdminMealForm({ mode, mealId }: AdminMealFormProps) {
       categoryId: m.categoryId,
       mealType: m.mealType as z.infer<typeof schema>["mealType"],
       basePrice: m.basePrice,
+      compareAtPrice: m.compareAtPrice ?? "",
       listingStatus: m.listingStatus,
       calories: n?.calories ?? 0,
       proteinG: n?.proteinG ?? "0",
@@ -127,7 +150,16 @@ export function AdminMealForm({ mode, mealId }: AdminMealFormProps) {
       richInProtein: m.richInProtein,
       richInFiber: m.richInFiber,
       richInLowCarb: m.richInLowCarb,
+      isSpecialOffer: m.isSpecialOffer,
+      specialOfferPriority: m.specialOfferPriority,
+      promoTagType: m.promoTagType ?? "",
+      promoTagText: m.promoTagText ?? "",
     });
+    setPromoConfig(
+      m.promoTagConfig
+        ? Object.fromEntries(Object.entries(m.promoTagConfig).map(([k, v]) => [k, String(v)]))
+        : {},
+    );
     setDesc(m.description ?? "");
     setImageUrl(m.coverUrl ?? "");
     setContentVersion((v) => v + 1);
@@ -184,12 +216,18 @@ export function AdminMealForm({ mode, mealId }: AdminMealFormProps) {
                       mealType: v.mealType,
                       description: desc || undefined,
                       basePrice: v.basePrice,
+                      compareAtPrice: v.compareAtPrice.trim() ? v.compareAtPrice : null,
                       listingStatus: v.listingStatus,
                       primaryImageUrl: imageUrl.trim() || undefined,
                       nutrition,
                       richInProtein: v.richInProtein,
                       richInFiber: v.richInFiber,
                       richInLowCarb: v.richInLowCarb,
+                      isSpecialOffer: v.isSpecialOffer,
+                      specialOfferPriority: v.specialOfferPriority,
+                      promoTagType: v.promoTagType || null,
+                      promoTagConfig: v.promoTagType ? promoConfig : null,
+                      promoTagText: v.promoTagText || null,
                     }),
                   });
                 } else if (mealId) {
@@ -202,12 +240,18 @@ export function AdminMealForm({ mode, mealId }: AdminMealFormProps) {
                       mealType: v.mealType,
                       description: desc || null,
                       basePrice: v.basePrice,
+                      compareAtPrice: v.compareAtPrice.trim() ? v.compareAtPrice : null,
                       listingStatus: v.listingStatus,
                       primaryImageUrl: imageUrl.trim() ? imageUrl.trim() : null,
                       nutrition,
                       richInProtein: v.richInProtein,
                       richInFiber: v.richInFiber,
                       richInLowCarb: v.richInLowCarb,
+                      isSpecialOffer: v.isSpecialOffer,
+                      specialOfferPriority: v.specialOfferPriority,
+                      promoTagType: v.promoTagType || null,
+                      promoTagConfig: v.promoTagType ? promoConfig : null,
+                      promoTagText: v.promoTagText || null,
                     }),
                   });
                   hydratedRef.current = null;
@@ -260,8 +304,43 @@ export function AdminMealForm({ mode, mealId }: AdminMealFormProps) {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <Label>Base price (INR)</Label>
-                  <Input className="rounded-2xl border-slate-200" {...form.register("basePrice")} />
+                  <Label>Selling price (INR)</Label>
+                  <Input className="rounded-2xl border-slate-200" placeholder="e.g. 449" {...form.register("basePrice")} />
+                </div>
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-3 space-y-2">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300"
+                      checked={!!form.watch("compareAtPrice")?.trim()}
+                      onChange={(e) => {
+                        if (!e.target.checked) form.setValue("compareAtPrice", "");
+                      }}
+                      readOnly={!!form.watch("compareAtPrice")?.trim()}
+                    />
+                    Show strike-off / original price
+                  </label>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500">Original price (struck through)</Label>
+                    <Input
+                      className="rounded-xl border-slate-200"
+                      placeholder="e.g. 549"
+                      {...form.register("compareAtPrice")}
+                    />
+                  </div>
+                  {(() => {
+                    const base = Number(form.watch("basePrice"));
+                    const compare = Number(form.watch("compareAtPrice"));
+                    if (!compare || !base || compare <= base) return null;
+                    const pct = Math.round((1 - base / compare) * 100);
+                    return (
+                      <p className="text-xs text-emerald-600 font-semibold">
+                        Preview: <span className="line-through text-slate-400">₹{compare}</span>{" "}
+                        <span className="text-slate-900 font-bold">₹{base}</span>{" "}
+                        <span className="text-rose-500">({pct}% OFF)</span>
+                      </p>
+                    );
+                  })()}
                 </div>
                 <div className="space-y-1">
                   <Label>Listing status</Label>
@@ -327,6 +406,80 @@ export function AdminMealForm({ mode, mealId }: AdminMealFormProps) {
                   <Input className="rounded-xl" {...form.register("fiberG")} />
                 </div>
               </div>
+            </div>
+
+            {/* Special Offer & Promo Tag */}
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4">
+              <div className="mb-3 text-sm font-semibold text-slate-700">Special Offer & Promo Tag</div>
+              <div className="mb-4 flex flex-wrap gap-6">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" className="h-4 w-4 rounded border-slate-300" {...form.register("isSpecialOffer")} />
+                  Mark as Special Offer
+                </label>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-slate-600">Priority</Label>
+                  <Input type="number" className="w-20 rounded-xl" {...form.register("specialOfferPriority")} />
+                </div>
+              </div>
+              <div className="mb-2 text-sm font-semibold text-slate-700">Promo Image Tag</div>
+              <p className="mb-3 text-xs text-slate-500">Overlay label shown on the product card image.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Tag type</Label>
+                  <select
+                    className="flex h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm"
+                    {...form.register("promoTagType")}
+                    onChange={(e) => {
+                      form.setValue("promoTagType", e.target.value);
+                      setPromoConfig({});
+                    }}
+                  >
+                    <option value="">None</option>
+                    <option value="CUSTOM_TEXT">Custom Text</option>
+                    <option value="ITEMS_AT_PRICE">Items at Price</option>
+                    <option value="PERCENT_OFF_ABOVE_AMOUNT">% Off Above Amount</option>
+                    <option value="PERCENT_OFF_UPTO_AMOUNT">% Off Upto Amount</option>
+                    <option value="FLAT_OFF">Flat Off</option>
+                    <option value="FREE_DELIVERY">Free Delivery</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Text override (optional)</Label>
+                  <Input className="rounded-2xl border-slate-200" placeholder="e.g. ITEMS AT ₹59" {...form.register("promoTagText")} />
+                </div>
+              </div>
+              {/* Dynamic config fields based on selected type */}
+              {(() => {
+                const t = form.watch("promoTagType");
+                if (!t || t === "FREE_DELIVERY") return null;
+                const fields: { key: string; label: string; placeholder: string }[] = [];
+                if (t === "CUSTOM_TEXT") fields.push({ key: "text", label: "Label text", placeholder: "BESTSELLER" });
+                if (t === "ITEMS_AT_PRICE") fields.push({ key: "price", label: "Price", placeholder: "59" });
+                if (t === "PERCENT_OFF_ABOVE_AMOUNT") {
+                  fields.push({ key: "percent", label: "Percent", placeholder: "10" });
+                  fields.push({ key: "minAmount", label: "Min order amount", placeholder: "2000" });
+                }
+                if (t === "PERCENT_OFF_UPTO_AMOUNT") {
+                  fields.push({ key: "percent", label: "Percent", placeholder: "60" });
+                  fields.push({ key: "maxDiscount", label: "Max discount", placeholder: "110" });
+                }
+                if (t === "FLAT_OFF") fields.push({ key: "amount", label: "Amount", placeholder: "50" });
+                return (
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {fields.map((f) => (
+                      <div key={f.key} className="space-y-1">
+                        <Label className="text-xs">{f.label}</Label>
+                        <Input
+                          className="rounded-xl"
+                          placeholder={f.placeholder}
+                          value={promoConfig[f.key] ?? ""}
+                          onChange={(e) => setPromoConfig((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             {err ? <p className="text-sm text-red-600">{err}</p> : null}

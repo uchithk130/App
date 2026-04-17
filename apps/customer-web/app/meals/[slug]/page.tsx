@@ -40,6 +40,7 @@ type MealDetail = {
   ratingAvg: number | null;
   ratingCount: number;
   ratingDistribution: Record<number, number>;
+  promoLabel: string | null;
 };
 
 /* ── Placeholder add-ons (swap with API data when backend supports it) ── */
@@ -158,6 +159,7 @@ export default function MealDetailPage() {
                     isFav ? removeFav.mutate(q.data.id) : addFav.mutate(q.data.id);
                   }}
                   backHref="/menu"
+                  promoLabel={q.data.promoLabel}
                 />
               </div>
 

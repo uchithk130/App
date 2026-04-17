@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { errorJson, json } from "@/lib/http";
 import { cursorQuerySchema, decodeCursor, encodeCursor } from "@/lib/pagination";
 import { customerMealImageUrl } from "@/lib/meal-image-customer";
+import { generatePromoLabel } from "@/lib/services/promo-label";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export async function GET(req: Request) {
     const q = cursorQuerySchema.parse(Object.fromEntries(url.searchParams));
     const categorySlug = url.searchParams.get("categorySlug") ?? undefined;
     const offersOnly = url.searchParams.get("offersOnly") === "1";
+    const specialOffers = url.searchParams.get("specialOffers") === "1";
     const search = url.searchParams.get("q")?.trim();
     const minProtein = url.searchParams.get("minProtein");
     const cursorId = q.cursor ? decodeCursor(q.cursor) : null;
@@ -29,6 +31,7 @@ export async function GET(req: Request) {
         category: categorySlug ? { slug: categorySlug, deletedAt: null } : undefined,
         nutrition: nutritionFilter,
         compareAtPrice: offersOnly ? { not: null } : undefined,
+        isSpecialOffer: specialOffers ? true : undefined,
         ...(search
           ? { name: { contains: search, mode: "insensitive" as const } }
           : {}),
@@ -44,6 +47,10 @@ export async function GET(req: Request) {
         mealType: true,
         basePrice: true,
         compareAtPrice: true,
+        isSpecialOffer: true,
+        promoTagType: true,
+        promoTagConfig: true,
+        promoTagText: true,
         richInProtein: true,
         richInFiber: true,
         richInLowCarb: true,
@@ -106,6 +113,8 @@ export async function GET(req: Request) {
           coverUrl,
           ratingAvg: r?.avg != null ? Number(r.avg.toFixed(2)) : null,
           ratingCount: r?.count ?? 0,
+          isSpecialOffer: m.isSpecialOffer,
+          promoLabel: generatePromoLabel(m.promoTagType, m.promoTagConfig as Record<string, unknown> | null, m.promoTagText),
         };
       }),
       nextCursor,

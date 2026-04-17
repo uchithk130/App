@@ -2,6 +2,7 @@ import { MealListingStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { errorJson, json } from "@/lib/http";
 import { customerMealImageUrl } from "@/lib/meal-image-customer";
+import { generatePromoLabel } from "@/lib/services/promo-label";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,8 @@ export async function GET(req: Request, ctx: Params) {
     richInProtein: meal.richInProtein,
     richInFiber: meal.richInFiber,
     richInLowCarb: meal.richInLowCarb,
+    isSpecialOffer: meal.isSpecialOffer,
+    promoLabel: generatePromoLabel(meal.promoTagType, meal.promoTagConfig as Record<string, unknown> | null, meal.promoTagText),
     category: meal.category,
     nutrition: meal.nutrition
       ? {

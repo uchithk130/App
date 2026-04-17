@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url       = env("DATABASE_URL")
-
+  directUrl = env("DIRECT_URL")
 
 }
 
@@ -141,6 +141,15 @@ enum MealListingStatus {
   ACTIVE
   INACTIVE
   PAUSED
+}
+
+enum PromoTagType {
+  CUSTOM_TEXT
+  ITEMS_AT_PRICE
+  PERCENT_OFF_ABOVE_AMOUNT
+  PERCENT_OFF_UPTO_AMOUNT
+  FLAT_OFF
+  FREE_DELIVERY
 }
 
 enum CustomMealRequestStatus {
@@ -498,6 +507,14 @@ model Meal {
   basePrice       Decimal            @db.Decimal(10, 2)
   /** Optional “was” price for offers / strike-through UI. */
   compareAtPrice  Decimal?           @db.Decimal(10, 2)
+  /** Marks this meal as a special offer shown on home + special-offers page. */
+  isSpecialOffer      Boolean        @default(false)
+  specialOfferPriority Int           @default(0)
+  /** Structured promo image-tag overlay. */
+  promoTagType        PromoTagType?
+  promoTagConfig      Json?
+  /** Admin override text; shown instead of auto-generated label when set. */
+  promoTagText        String?
   images      MealImage[]
   nutrition   MealNutrition?
   cartItems   CartItem[]
@@ -512,6 +529,7 @@ model Meal {
   @@index([categoryId, isActive])
   @@index([mealType])
   @@index([isActive, createdAt])
+  @@index([isSpecialOffer, isActive])
 }
 
 model MealImage {

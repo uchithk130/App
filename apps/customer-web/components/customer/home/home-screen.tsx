@@ -38,6 +38,7 @@ type HomeFeed = {
     coverUrl: string | null;
     ratingAvg: number | null;
     ratingCount: number;
+    promoLabel: string | null;
   }[];
 };
 
@@ -350,6 +351,13 @@ const cartCount = cart.data?.items.reduce((s, i) => s + i.quantity, 0) ?? 0;
                   >
                     <Heart className="h-5 w-5 text-rose-500" strokeWidth={2} />
                   </button>
+                  {m.promoLabel && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-2.5 pb-2 pt-5">
+                      <span className="text-[10px] font-extrabold uppercase leading-tight tracking-wider text-white drop-shadow-sm">
+                        {m.promoLabel}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="p-2.5">
                   <p className="line-clamp-2 text-sm font-bold text-slate-900">{m.name}</p>

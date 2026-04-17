@@ -50,6 +50,9 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 }
 
+const TERMINAL_STATUSES = new Set(["DELIVERED", "CANCELLED", "REFUNDED", "FAILED_DELIVERY"]);
+const ACTIVE_DELIVERY_STATUSES = new Set(["ASSIGNED", "PICKED_UP", "OUT_FOR_DELIVERY"]);
+
 export default function OrderTrackingPage() {
 const params = useParams<{ id: string }>();
 const router = useRouter();
@@ -61,8 +64,15 @@ const q = useQuery({
   queryKey: ["order", params.id],
   queryFn: () => api<OrderDetail>(`/api/v1/orders/${params.id}`),
   enabled: !!params.id,
-  refetchInterval: 10000,
+  refetchInterval: (query) => {
+    const status = query.state.data?.status;
+    if (status && TERMINAL_STATUSES.has(status)) return false;
+    return 10_000;
+  },
 });
+
+const isTerminal = !!q.data && TERMINAL_STATUSES.has(q.data.status);
+const isActiveDelivery = !!q.data && ACTIVE_DELIVERY_STATUSES.has(q.data.status);
 
 const order = q.data;
 
@@ -114,7 +124,7 @@ React.useEffect(() => {
             <ArrowLeft className="h-5 w-5 text-slate-800" />
           </Link>
           <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-bold text-slate-900">Order Tracking</h1>
+            <h1 className="text-lg font-bold text-slate-900">{isTerminal ? "Order Summary" : "Order Tracking"}</h1>
             {order && (
               <p className="truncate text-xs text-slate-500">#{order.id.slice(0, 8)}</p>
             )}
@@ -139,42 +149,55 @@ React.useEffect(() => {
 
           {order && (
             <>
-              {/* Map (left column on desktop) */}
+              {/* Map — only during active delivery */}
               <div className="lg:sticky lg:top-20 lg:self-start">
-                <TrackingMap destination={destination} riderPosition={null} />
-
-                {/* Estimated time */}
-                <div className="mt-3 flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50">
-                    <Clock className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Estimated delivery</p>
-                    <p className="text-sm font-bold text-slate-900">
-                      {order.status === "DELIVERED" ? "Delivered" : "25 - 35 min"}
+                {!isTerminal ? (
+                  <>
+                    <TrackingMap destination={destination} riderPosition={null} />
+                    <div className="mt-3 flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50">
+                        <Clock className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500">Estimated delivery</p>
+                        <p className="text-sm font-bold text-slate-900">25 \u2013 35 min</p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 rounded-2xl bg-emerald-50 p-6 text-center ring-1 ring-emerald-100">
+                    <Package className="h-8 w-8 text-emerald-600" />
+                    <p className="text-sm font-bold text-emerald-700">
+                      {order.status === "DELIVERED" ? "Order Delivered" : order.status === "CANCELLED" ? "Order Cancelled" : "Order Completed"}
+                    </p>
+                    <p className="text-xs text-emerald-600/80">
+                      {new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                     </p>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Info column (right on desktop) */}
               <div className="space-y-4">
-                {/* Rider */}
-                {order.assignment ? (
-                  <RiderInfoCard
-                    name={order.assignment.rider.fullName}
-                    orderId={order.id}
-                  />
-                ) : (
-                  <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50">
-                      <Package className="h-5 w-5 text-amber-600" />
+                {/* Rider — only during active delivery, hidden after completion for privacy */}
+                {!isTerminal && (
+                  order.assignment ? (
+                    <RiderInfoCard
+                      name={order.assignment.rider.fullName}
+                      orderId={order.id}
+                      showActions={isActiveDelivery}
+                    />
+                  ) : (
+                    <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50">
+                        <Package className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">Finding a rider</p>
+                        <p className="text-xs text-slate-500">We&apos;re assigning a delivery partner...</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Finding a rider</p>
-                      <p className="text-xs text-slate-500">We&apos;re assigning a delivery partner...</p>
-                    </div>
-                  </div>
+                  )
                 )}
 
                 {/* Progress */}

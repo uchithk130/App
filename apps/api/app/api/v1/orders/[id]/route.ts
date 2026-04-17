@@ -31,6 +31,9 @@ export async function GET(req: Request, ctx: Params) {
       },
     });
     if (!order) return errorJson("Not found", 404);
+
+    const terminal = ["DELIVERED", "CANCELLED", "REFUNDED", "FAILED_DELIVERY"].includes(order.status);
+
     return json({
       ...order,
       subtotal: order.subtotal.toString(),
@@ -38,6 +41,12 @@ export async function GET(req: Request, ctx: Params) {
       tax: order.tax.toString(),
       discount: order.discount.toString(),
       total: order.total.toString(),
+      // Strip rider details after delivery for privacy
+      assignment: terminal ? null : order.assignment,
+      // Strip address coordinates after delivery
+      addressSnapshot: terminal
+        ? { ...(order.addressSnapshot as Record<string, unknown>), lat: undefined, lng: undefined }
+        : order.addressSnapshot,
       items: order.items.map((i) => ({
         ...i,
         unitPrice: i.unitPrice.toString(),

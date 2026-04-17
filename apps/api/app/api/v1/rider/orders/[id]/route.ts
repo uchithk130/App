@@ -35,9 +35,19 @@ export async function GET(req: Request, ctx: Params) {
 
     const allowedNext = RIDER_ACTIONS.filter((s) => canTransition(order.status, s));
 
+    const terminal = ["DELIVERED", "FAILED_DELIVERY", "CANCELLED"].includes(order.status);
+
     return json({
       ...order,
       total: order.total.toString(),
+      // Strip customer phone after delivery for privacy
+      customer: terminal
+        ? { fullName: order.customer.fullName, user: { phone: null } }
+        : order.customer,
+      // Strip address coordinates after delivery
+      addressSnapshot: terminal
+        ? { ...(order.addressSnapshot as Record<string, unknown>), lat: undefined, lng: undefined }
+        : order.addressSnapshot,
       allowedNext,
     });
   } catch (e) {

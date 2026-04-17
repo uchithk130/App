@@ -15,9 +15,12 @@ type MealRow = {
   slug: string;
   mealType: string;
   basePrice: string;
+  compareAtPrice: string | null;
   listingStatus: "ACTIVE" | "INACTIVE" | "PAUSED";
   coverUrl: string | null;
   category: { name: string };
+  isSpecialOffer: boolean;
+  promoLabel: string | null;
 };
 
 const STATUS_BTN =
@@ -49,6 +52,30 @@ export default function AdminMealsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-meals-list"] }),
   });
 
+  const toggleOffer = useMutation({
+    mutationFn: async ({ id, isSpecialOffer }: { id: string; isSpecialOffer: boolean }) => {
+      await api(`/api/v1/admin/meals/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isSpecialOffer }),
+      });
+    },
+    onMutate: async ({ id, isSpecialOffer }) => {
+      await qc.cancelQueries({ queryKey: ["admin-meals-list"] });
+      const prev = qc.getQueryData<{ items: MealRow[] }>(["admin-meals-list"]);
+      if (prev) {
+        qc.setQueryData<{ items: MealRow[] }>(["admin-meals-list"], {
+          ...prev,
+          items: prev.items.map((m) => m.id === id ? { ...m, isSpecialOffer } : m),
+        });
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["admin-meals-list"], ctx.prev);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["admin-meals-list"] }),
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -75,9 +102,28 @@ export default function AdminMealsPage() {
           >
             <AdminMealCover coverUrl={m.coverUrl} alt={m.name} />
             <div className="p-4">
-              <div className="line-clamp-2 font-bold text-slate-900">{m.name}</div>
-              <div className="mt-1 text-xs text-slate-500">{m.category.name}</div>
-              <div className="mt-2 text-lg font-bold text-admin-orange">₹{m.basePrice}</div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="line-clamp-2 font-bold text-slate-900">{m.name}</div>
+                  <div className="mt-1 text-xs text-slate-500">{m.category.name}</div>
+                </div>
+                {m.isSpecialOffer && (
+                  <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                    OFFER
+                  </span>
+                )}
+              </div>
+              {m.promoLabel && (
+                <div className="mt-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-orange-500 px-2 py-1 text-[10px] font-bold text-white">
+                  {m.promoLabel}
+                </div>
+              )}
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-lg font-bold text-admin-orange">₹{m.basePrice}</span>
+                {m.compareAtPrice && Number(m.compareAtPrice) > Number(m.basePrice) && (
+                  <span className="text-xs text-slate-400 line-through">₹{m.compareAtPrice}</span>
+                )}
+              </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Button
                   asChild
@@ -87,6 +133,18 @@ export default function AdminMealsPage() {
                 >
                   <Link href={`/meals/${m.id}/edit`}>Edit</Link>
                 </Button>
+                <button
+                  type="button"
+                  disabled={toggleOffer.isPending}
+                  onClick={() => toggleOffer.mutate({ id: m.id, isSpecialOffer: !m.isSpecialOffer })}
+                  className={`${STATUS_BTN} ${
+                    m.isSpecialOffer
+                      ? "bg-amber-500 text-white ring-amber-600"
+                      : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {m.isSpecialOffer ? "Offer ✓" : "Offer"}
+                </button>
                 {(["ACTIVE", "PAUSED", "INACTIVE"] as const).map((s) => (
                   <button
                     key={s}

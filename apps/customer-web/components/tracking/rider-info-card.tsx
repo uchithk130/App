@@ -5,9 +5,11 @@ import { Phone, MessageCircle, User } from "lucide-react";
 type Props = {
   name: string;
   orderId: string;
+  /** Show call/message actions — should be true only during active delivery */
+  showActions?: boolean;
 };
 
-export function RiderInfoCard({ name, orderId }: Props) {
+export function RiderInfoCard({ name, orderId, showActions = true }: Props) {
   const initials = name
     .split(" ")
     .map((w) => w[0])
@@ -24,26 +26,28 @@ export function RiderInfoCard({ name, orderId }: Props) {
 
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold text-slate-900">{name}</p>
-        <p className="text-xs text-slate-500">Order #{orderId.slice(0, 8)}</p>
+        <p className="text-xs text-slate-500">Delivery partner \u00B7 #{orderId.slice(0, 8)}</p>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100"
-          aria-label="Chat with rider"
-        >
-          <MessageCircle className="h-5 w-5" />
-        </button>
-        <button
-          type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100"
-          aria-label="Call rider"
-        >
-          <Phone className="h-5 w-5" />
-        </button>
-      </div>
+      {/* Contact actions — only during active delivery */}
+      {showActions && (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100"
+            aria-label="Chat with rider"
+          >
+            <MessageCircle className="h-5 w-5" />
+          </button>
+          <a
+            href="tel:"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100"
+            aria-label="Call rider"
+          >
+            <Phone className="h-5 w-5" />
+          </a>
+        </div>
+      )}
     </div>
   );
 }

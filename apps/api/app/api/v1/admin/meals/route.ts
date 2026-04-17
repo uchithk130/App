@@ -1,11 +1,12 @@
 import { z } from "zod";
-import { MealListingStatus, MealType } from "@prisma/client";
+import { MealListingStatus, MealType, PromoTagType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { errorJson, json } from "@/lib/http";
 import { requireAdmin, AuthError } from "@/lib/auth/admin";
 import { cursorQuerySchema, decodeCursor, encodeCursor } from "@/lib/pagination";
 import { isActiveForListingStatus } from "@/lib/services/meal-listing";
 import { resolveStoredImageUrl } from "@/lib/meal-image-url";
+import { generatePromoLabel } from "@/lib/services/promo-label";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ const createSchema = z.object({
   mealType: z.nativeEnum(MealType),
   description: z.string().optional(),
   basePrice: z.string().or(z.number()),
+  compareAtPrice: z.union([z.string(), z.number()]).nullable().optional(),
   isActive: z.boolean().optional(),
   listingStatus: z.nativeEnum(MealListingStatus).optional(),
   primaryImageUrl: z.string().optional(),
@@ -29,6 +31,11 @@ const createSchema = z.object({
   richInProtein: z.boolean().optional(),
   richInFiber: z.boolean().optional(),
   richInLowCarb: z.boolean().optional(),
+  isSpecialOffer: z.boolean().optional(),
+  specialOfferPriority: z.number().int().optional(),
+  promoTagType: z.nativeEnum(PromoTagType).nullable().optional(),
+  promoTagConfig: z.record(z.unknown()).nullable().optional(),
+  promoTagText: z.string().nullable().optional(),
 });
 
 export async function GET(req: Request) {
@@ -63,7 +70,9 @@ export async function GET(req: Request) {
       items: page.map((m) => ({
         ...m,
         basePrice: m.basePrice.toString(),
+        compareAtPrice: m.compareAtPrice?.toString() ?? null,
         coverUrl: resolveStoredImageUrl(m.images[0]?.url ?? null),
+        promoLabel: generatePromoLabel(m.promoTagType, m.promoTagConfig as Record<string, unknown> | null, m.promoTagText),
         nutrition: m.nutrition
           ? {
               ...m.nutrition,
@@ -100,11 +109,17 @@ export async function POST(req: Request) {
           mealType: body.mealType,
           description: body.description,
           basePrice: String(body.basePrice),
+          compareAtPrice: body.compareAtPrice != null ? String(body.compareAtPrice) : null,
           isActive,
           listingStatus: listing,
           richInProtein: body.richInProtein ?? false,
           richInFiber: body.richInFiber ?? false,
           richInLowCarb: body.richInLowCarb ?? false,
+          isSpecialOffer: body.isSpecialOffer ?? false,
+          specialOfferPriority: body.specialOfferPriority ?? 0,
+          promoTagType: body.promoTagType ?? null,
+          promoTagConfig: body.promoTagConfig ?? undefined,
+          promoTagText: body.promoTagText ?? null,
           nutrition: {
             create: {
               calories: body.nutrition.calories,

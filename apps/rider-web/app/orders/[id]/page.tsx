@@ -98,6 +98,9 @@ function ProgressSteps({ current }: { current: string }) {
   );
 }
 
+const RIDER_TERMINAL = new Set(["DELIVERED", "FAILED_DELIVERY", "CANCELLED"]);
+const RIDER_ACTIVE = new Set(["ASSIGNED", "PICKED_UP", "OUT_FOR_DELIVERY"]);
+
 export default function RiderOrderPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -121,7 +124,11 @@ export default function RiderOrderPage() {
     queryKey: ["rider-order", orderId],
     queryFn: () => api<RiderOrderDetail>(`/api/v1/rider/orders/${orderId}`),
     enabled: ready && !!orderId && !!getAccessToken(),
-    refetchInterval: 5_000,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status && RIDER_TERMINAL.has(status)) return false;
+      return 5_000;
+    },
   });
 
   const storeQ = useQuery({
@@ -200,90 +207,103 @@ export default function RiderOrderPage() {
             </div>
           </div>
 
-          {/* Customer card */}
-          <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-            <div className="mb-3 flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600">
-                <User className="h-5 w-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-slate-800">{d.customer.fullName}</p>
-                {d.customer.user.phone && (
-                  <a href={`tel:${d.customer.user.phone}`} className="flex items-center gap-1 text-xs text-slate-500">
-                    <Phone className="h-3 w-3" />
-                    {d.customer.user.phone}
-                  </a>
+          {/* Customer card — hide sensitive details after delivery */}
+          {(() => {
+            const active = RIDER_ACTIVE.has(d.status);
+            const terminal = RIDER_TERMINAL.has(d.status);
+            return (
+              <>
+                <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                  <div className="mb-3 flex items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+                      <User className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-slate-800">{d.customer.fullName}</p>
+                      {active && d.customer.user.phone && (
+                        <a href={`tel:${d.customer.user.phone}`} className="flex items-center gap-1 text-xs text-slate-500">
+                          <Phone className="h-3 w-3" />
+                          {d.customer.user.phone}
+                        </a>
+                      )}
+                      {terminal && (
+                        <p className="text-xs text-slate-400">Delivery completed</p>
+                      )}
+                    </div>
+                    {active && d.customer.user.phone && (
+                      <a
+                        href={`tel:${d.customer.user.phone}`}
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100"
+                        aria-label="Call customer"
+                      >
+                        <Phone className="h-4 w-4" />
+                      </a>
+                    )}
+                  </div>
+                  {active && (
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                        <p className="text-sm text-slate-700">{formatAddr(addr)}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Navigation & contact buttons — only during active delivery */}
+                {active && (
+                  <div className="space-y-2">
+                    {store && (d.status === "ASSIGNED" || d.status === "PICKED_UP") && (
+                      <a
+                        href={buildStoreUrl(store)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3.5 text-white shadow-sm transition hover:from-blue-600 hover:to-blue-700"
+                      >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20">
+                          <Store className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold">Navigate to Counter</p>
+                          <p className="truncate text-xs text-blue-100">{store.name} \u2022 {store.address}</p>
+                        </div>
+                        <Navigation className="h-5 w-5 shrink-0" />
+                      </a>
+                    )}
+
+                    {(d.status === "PICKED_UP" || d.status === "OUT_FOR_DELIVERY") && (
+                      <a
+                        href={buildMapsUrl(addr)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3.5 text-white shadow-sm transition hover:from-amber-600 hover:to-orange-600"
+                      >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20">
+                          <MapPin className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold">Navigate to Customer</p>
+                          <p className="truncate text-xs text-amber-100">{formatAddr(addr)}</p>
+                        </div>
+                        <Navigation className="h-5 w-5 shrink-0" />
+                      </a>
+                    )}
+
+                    {d.customer.user.phone && (
+                      <a
+                        href={`tel:${d.customer.user.phone}`}
+                        className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50"
+                      >
+                        <Phone className="h-4 w-4" />
+                        <span className="flex-1 text-sm font-bold">Call Customer</span>
+                        <span className="text-xs text-slate-400">{d.customer.user.phone}</span>
+                      </a>
+                    )}
+                  </div>
                 )}
-              </div>
-              {d.customer.user.phone && (
-                <a
-                  href={`tel:${d.customer.user.phone}`}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100"
-                >
-                  <Phone className="h-4 w-4" />
-                </a>
-              )}
-            </div>
-            <div className="rounded-xl bg-slate-50 p-3">
-              <div className="flex items-start gap-2">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                <p className="text-sm text-slate-700">{formatAddr(addr)}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation buttons */}
-          <div className="space-y-2">
-            {/* Navigate to Counter/Store */}
-            {store && (d.status === "ASSIGNED" || d.status === "PICKED_UP") && (
-              <a
-                href={buildStoreUrl(store)}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3.5 text-white shadow-sm transition hover:from-blue-600 hover:to-blue-700"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20">
-                  <Store className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold">Navigate to Counter</p>
-                  <p className="truncate text-xs text-blue-100">{store.name} • {store.address}</p>
-                </div>
-                <Navigation className="h-5 w-5 shrink-0" />
-              </a>
-            )}
-
-            {/* Navigate to Customer */}
-            {(d.status === "PICKED_UP" || d.status === "OUT_FOR_DELIVERY") && (
-              <a
-                href={buildMapsUrl(addr)}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3.5 text-white shadow-sm transition hover:from-amber-600 hover:to-orange-600"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20">
-                  <MapPin className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold">Navigate to Customer</p>
-                  <p className="truncate text-xs text-amber-100">{formatAddr(addr)}</p>
-                </div>
-                <Navigation className="h-5 w-5 shrink-0" />
-              </a>
-            )}
-
-            {/* Call customer */}
-            {d.customer.user.phone && (
-              <a
-                href={`tel:${d.customer.user.phone}`}
-                className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50"
-              >
-                <Phone className="h-4 w-4" />
-                <span className="flex-1 text-sm font-bold">Call Customer</span>
-                <span className="text-xs text-slate-400">{d.customer.user.phone}</span>
-              </a>
-            )}
-          </div>
+              </>
+            );
+          })()}
 
           {/* Order info */}
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">

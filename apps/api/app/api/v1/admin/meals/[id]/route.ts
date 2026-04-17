@@ -1,11 +1,12 @@
 import { z } from "zod";
-import { Prisma, MealListingStatus, MealType } from "@prisma/client";
+import { Prisma, MealListingStatus, MealType, PromoTagType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { errorJson, json } from "@/lib/http";
 import { requireAdmin, AuthError } from "@/lib/auth/admin";
 import { writeAudit } from "@/lib/services/audit";
 import { isActiveForListingStatus } from "@/lib/services/meal-listing";
 import { resolveStoredImageUrl } from "@/lib/meal-image-url";
+import { generatePromoLabel } from "@/lib/services/promo-label";
 
 export const dynamic = "force-dynamic";
 
@@ -34,12 +35,19 @@ export async function GET(req: Request, ctx: Params) {
       mealType: meal.mealType,
       description: meal.description,
       basePrice: meal.basePrice.toString(),
+      compareAtPrice: meal.compareAtPrice?.toString() ?? null,
       listingStatus: meal.listingStatus,
       isActive: meal.isActive,
       coverUrl: resolveStoredImageUrl(meal.images[0]?.url ?? null),
       richInProtein: meal.richInProtein,
       richInFiber: meal.richInFiber,
       richInLowCarb: meal.richInLowCarb,
+      isSpecialOffer: meal.isSpecialOffer,
+      specialOfferPriority: meal.specialOfferPriority,
+      promoTagType: meal.promoTagType,
+      promoTagConfig: meal.promoTagConfig,
+      promoTagText: meal.promoTagText,
+      promoLabel: generatePromoLabel(meal.promoTagType, meal.promoTagConfig as Record<string, unknown> | null, meal.promoTagText),
       nutrition: meal.nutrition
         ? {
             calories: meal.nutrition.calories,
@@ -63,6 +71,7 @@ const patchSchema = z.object({
   mealType: z.nativeEnum(MealType).optional(),
   description: z.string().nullable().optional(),
   basePrice: z.union([z.string(), z.number()]).optional(),
+  compareAtPrice: z.union([z.string(), z.number()]).nullable().optional(),
   isActive: z.boolean().optional(),
   listingStatus: z.nativeEnum(MealListingStatus).optional(),
   primaryImageUrl: z.string().nullable().optional(),
@@ -78,6 +87,11 @@ const patchSchema = z.object({
   richInProtein: z.boolean().optional(),
   richInFiber: z.boolean().optional(),
   richInLowCarb: z.boolean().optional(),
+  isSpecialOffer: z.boolean().optional(),
+  specialOfferPriority: z.number().int().optional(),
+  promoTagType: z.nativeEnum(PromoTagType).nullable().optional(),
+  promoTagConfig: z.record(z.unknown()).nullable().optional(),
+  promoTagText: z.string().nullable().optional(),
 });
 
 export async function PATCH(req: Request, ctx: Params) {
@@ -101,9 +115,17 @@ export async function PATCH(req: Request, ctx: Params) {
         mealType: body.mealType,
         description: body.description === null ? null : body.description,
         basePrice: body.basePrice === undefined ? undefined : String(body.basePrice),
+        ...(body.compareAtPrice !== undefined
+          ? { compareAtPrice: body.compareAtPrice != null ? String(body.compareAtPrice) : null }
+          : {}),
         ...(body.richInProtein !== undefined ? { richInProtein: body.richInProtein } : {}),
         ...(body.richInFiber !== undefined ? { richInFiber: body.richInFiber } : {}),
         ...(body.richInLowCarb !== undefined ? { richInLowCarb: body.richInLowCarb } : {}),
+        ...(body.isSpecialOffer !== undefined ? { isSpecialOffer: body.isSpecialOffer } : {}),
+        ...(body.specialOfferPriority !== undefined ? { specialOfferPriority: body.specialOfferPriority } : {}),
+        ...(body.promoTagType !== undefined ? { promoTagType: body.promoTagType } : {}),
+        ...(body.promoTagConfig !== undefined ? { promoTagConfig: body.promoTagConfig ?? Prisma.JsonNull } : {}),
+        ...(body.promoTagText !== undefined ? { promoTagText: body.promoTagText } : {}),
       };
       if (listingStatus !== undefined) {
         data.listingStatus = listingStatus;

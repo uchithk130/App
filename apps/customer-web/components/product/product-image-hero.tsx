@@ -11,9 +11,10 @@ type Props = {
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
   backHref?: string;
+  promoLabel?: string | null;
 };
 
-export function ProductImageHero({ images, alt, isFavorite, onToggleFavorite, backHref = "/menu" }: Props) {
+export function ProductImageHero({ images, alt, isFavorite, onToggleFavorite, backHref = "/menu", promoLabel }: Props) {
   const [idx, setIdx] = React.useState(0);
   const [loaded, setLoaded] = React.useState(false);
   const src = images[idx]?.url;
@@ -64,6 +65,15 @@ export function ProductImageHero({ images, alt, isFavorite, onToggleFavorite, ba
           </button>
         )}
       </div>
+
+      {/* Promo tag overlay */}
+      {promoLabel && (
+        <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-4 pb-3 pt-6">
+          <span className="text-xs font-extrabold uppercase tracking-wider text-white drop-shadow-sm">
+            {promoLabel}
+          </span>
+        </div>
+      )}
 
       {/* Image pagination dots */}
       {images.length > 1 && (

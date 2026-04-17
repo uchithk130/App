@@ -55,6 +55,7 @@ type MealCard = {
   coverUrl: string | null;
   ratingAvg: number | null;
   ratingCount: number;
+  promoLabel: string | null;
 };
 
 type CartItem = { id: string; quantity: number; meal: { id: string } };
@@ -146,6 +147,15 @@ function MealCardItem({
               </span>
             )}
           </div>
+
+          {/* Promo tag overlay */}
+          {meal.promoLabel && (
+            <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-2.5 pb-2 pt-5">
+              <span className="text-[10px] font-extrabold uppercase leading-tight tracking-wider text-white drop-shadow-sm">
+                {meal.promoLabel}
+              </span>
+            </div>
+          )}
         </div>
       </Link>
 
@@ -191,14 +201,14 @@ function MealCardItem({
         {/* Price + Cart CTA  always bottom aligned */}
         <div className="mt-auto flex items-end justify-between pt-2">
           <div className="leading-tight">
-            <p className="text-sm font-bold text-slate-900">
-              {fmtPrice(meal.basePrice)}
-            </p>
             {hasDiscount && (
               <p className="text-[10px] text-slate-400 line-through">
                 {fmtPrice(meal.compareAtPrice!)}
               </p>
             )}
+            <p className="text-sm font-bold text-slate-900">
+              {fmtPrice(meal.basePrice)}
+            </p>
           </div>
 
           {cartQty > 0 ? (

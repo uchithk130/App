@@ -2,6 +2,7 @@ import { MealListingStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { json } from "@/lib/http";
 import { customerMealImageUrl } from "@/lib/meal-image-customer";
+import { generatePromoLabel } from "@/lib/services/promo-label";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +25,9 @@ export async function GET(req: Request) {
         deletedAt: null,
         isActive: true,
         listingStatus: MealListingStatus.ACTIVE,
-        compareAtPrice: { not: null },
+        isSpecialOffer: true,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ specialOfferPriority: "desc" }, { createdAt: "desc" }],
       take: 12,
       select: {
         id: true,
@@ -34,6 +35,9 @@ export async function GET(req: Request) {
         slug: true,
         basePrice: true,
         compareAtPrice: true,
+        promoTagType: true,
+        promoTagConfig: true,
+        promoTagText: true,
         images: { take: 1, orderBy: { sortOrder: "asc" }, select: { url: true } },
       },
     }),
@@ -64,6 +68,7 @@ export async function GET(req: Request) {
       coverUrl,
       ratingAvg: r?.avg != null ? Number(r.avg.toFixed(2)) : null,
       ratingCount: r?.count ?? 0,
+      promoLabel: generatePromoLabel(m.promoTagType, m.promoTagConfig as Record<string, unknown> | null, m.promoTagText),
     };
   });
 

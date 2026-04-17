@@ -17,6 +17,7 @@ type Meal = {
   coverUrl: string | null;
   ratingAvg: number | null;
   ratingCount: number;
+  promoLabel: string | null;
 };
 
 function formatInr(n: string) {
@@ -26,7 +27,7 @@ function formatInr(n: string) {
 }
 
 async function fetchOffers(q: string): Promise<{ items: Meal[] }> {
-  const sp = new URLSearchParams({ limit: "40", offersOnly: "1" });
+  const sp = new URLSearchParams({ limit: "40", specialOffers: "1" });
   if (q.trim()) sp.set("q", q.trim());
   const res = await fetch(`${API_BASE}/api/v1/meals?${sp.toString()}`);
   if (!res.ok) throw new Error("Failed");
@@ -98,6 +99,13 @@ export default function SpecialOffersPage() {
                     <span className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-md ring-1 ring-slate-100">
                       <Heart className="h-5 w-5 text-rose-500" strokeWidth={2} />
                     </span>
+                    {m.promoLabel && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-2.5 pb-2 pt-5">
+                        <span className="text-[10px] font-extrabold uppercase leading-tight tracking-wider text-white drop-shadow-sm">
+                          {m.promoLabel}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="p-2.5">
                     <p className="line-clamp-2 text-sm font-bold text-slate-900">{m.name}</p>
